@@ -15,7 +15,7 @@ This app is using a web crawler to get data. Therefore, DON'T SPAM REQUEST! Othe
 
 ## Installation
 ```bash
-git clone https://github.com/explooosion/electron-alarm-clock.git
+git clone https://github.com/nohackjustnoobb/DD-Tools.git
 ```
 
 ```bash
