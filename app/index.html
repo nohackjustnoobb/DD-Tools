@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>DD Tools</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="https://kit.fontawesome.com/a076d05399.js"></script>
+	<script src="js/jquery.min.js"></script>
+	<script src="js/jquery.cookie.min.js"></script>
+	<script src="https://www.youtube.com/iframe_api"></script>
+</head>
+
+<body onload=check_following_channel()>
+	<div class="background"></div>
+	<div class="shadow" id="show_navigation" onclick=show_navigation()>
+		<i class="fas fa-chevron-down" onmousedown=mousedown(this) onmouseup=mouseup(this)></i>
+	</div>
+	<div class="shadow" id="navigation">
+		<div id="channel">
+			<div id="addstream" onclick=open_addstreaminterface() onmousedown=mousedown(this) onmouseup=mouseup(this)>
+				<i class="fas fa-plus-square"></i>
+			</div>
+		</div>
+		<div id="controller">
+			<div class="tool" style="border-left-width: 0;">
+				<i class="fas fa-volume-up icon" onclick=voice_up()></i>
+				<i class="fas fa-volume-down icon" onclick=voice_down()></i>
+			</div>
+			<div class="tool">
+				<i class="fas fa-play icon" onclick=play_all_player()></i>
+				<i class="fas fa-pause icon" onclick=pause_all_player()></i>
+			</div>
+			<div class="tool">
+				<i class="fas fa-cog icon" onclick=open_setting()></i>
+				<i class="fas fa-sync-alt icon" onclick=check_following_channel()></i>
+			</div>
+			<div class="tool">
+				<i class="fas fa-chevron-up icon" onclick=hide_navigation()></i>
+				<i class="fas fa-expand icon" id="fullicon" onclick=toggle_fullscreen()></i>
+			</div>
+		</div>
+	</div>
+	<div id="setting_bg" onclick="close_addstreaminterface(); close_setting(); close_addfollowchannelinterface();">
+	</div>
+	<div class="shadow" id="addstreaminterface">
+		<h1>Stream or Channel Link</h1>
+		<input type="text" class="linkinput" id="addstreaminterfaceinput">
+		<div id="addcancel">
+			<button class="add" id="addcancel_add" onclick=add_channel() onmousedown=mousedown(this)
+				onmouseup=mouseup(this)>Add</button>
+			<button class="cancel" id="addcancel_cancel" onclick=close_addstreaminterface() onmousedown=mousedown(this)
+				onmouseup=mouseup(this)>Cancel</button>
+		</div>
+	</div>
+	<div id="addfollowchannelinterface">
+		<h1>Channel Link</h1>
+		<input type="text" class="linkinput" id="addfollowchannelinterfaceinput">
+		<div id="follow_addcancel">
+			<button class="add" id="follow_addcancel_add" onclick=add_channel_preview() onmousedown=mousedown(this)
+				onmouseup=mouseup(this)>Add</button>
+			<button class="cancel" id="follow_addcancel_cancel" onclick=close_addfollowchannelinterface()
+				onmousedown=mousedown(this) onmouseup=mouseup(this)>Cancel</button>
+		</div>
+	</div>
+	<div class="shadow" id="setting">
+		<div id="setting_text">
+			<i class="fas fa-cog"></i>
+			<h1>Settings</h1>
+		</div>
+		<div class="setting_" id="channel_setting">
+			<div class="title" onclick="toggle_channel_setting();">
+				<i class="fas fa-caret-right" id="channel_arrow"></i>
+				<h1>Following Channels</h1>
+			</div>
+			<div id="channel_preview">
+				<div class="channel_preview_div" id="add_follow_channel" onclick=open_addfollowchannelinterface()
+					onmousedown=mousedown(this) onmouseup=mouseup(this)>
+					<i class="fas fa-plus-circle"></i>
+				</div>
+			</div>
+		</div>
+		<div class="setting_" id="about">
+			<div class="title" onclick="toggle_about()">
+				<i class="fas fa-caret-right" id="about_arrow"></i>
+				<h1>About</h1>
+			</div>
+			<div id="about_text">
+				<p>DD Tools - Ver.Beta 0.0.1<br> Bugs repost: https://github.com/nohackjustnoobb/DD-Tools/issues
+					<br>GitHub Link: https://github.com/nohackjustnoobb/DD-Tools</p>
+			</div>
+		</div>
+	</div>
+	<div id="display"></div>
+	</div>
+</body>
+<script src="js/script.js"></script>
+
+</html>
