@@ -1,4 +1,5 @@
-
+# Status
+This application will not be update in the future 🥲
 
 # DD-Tools
 This is a tool that you can watch multiple streams at once time and it is still in beta. You can report bugs on the issues page.
