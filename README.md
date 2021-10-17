@@ -1,10 +1,15 @@
 # Status
 This application will not be update in the future 🥲
 
+
+This project is migrated to master.
+
+Go to https://github.com/nohackjustnoobb/DD-Tools for latest update.
+
 # DD-Tools
 This is a tool that you can watch multiple streams at once time and it is still in beta. You can report bugs on the issues page.
 
-Source code: https://github.com/nohackjustnoobb/DD-Tools
+Source code: https://github.com/nohackjustnoobb/DD-Tools/tree/electron-version
 
 # Warning
 This app is using a web crawler to get data. Therefore, DON'T SPAM REQUEST! Otherwise, your IP will get limited using google services for a couple of hours.
