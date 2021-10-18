@@ -8,7 +8,8 @@ import 'package:html/parser.dart' show parse;
 import 'Home/home.dart';
 
 void main() async {
-  ChannelList channelList = await ChannelList.readFromStorage();
+  ChannelList channelList =
+      await ChannelList.readFromStorage(fetchBackground: true);
 
   runApp(App(
     channelList: channelList,
@@ -142,8 +143,11 @@ class Channel {
 class ChannelList extends ChangeNotifier {
   final _channelList = <Channel>[];
   final _channelIDList = <String>[];
+  String? apiKey;
 
   List<Channel> get channelList => _channelList;
+
+  ChannelList({this.apiKey});
 
   void add(Channel channel) {
     if (!_channelIDList.contains(channel.id)) {
@@ -156,6 +160,7 @@ class ChannelList extends ChangeNotifier {
 
   void remove(Channel channel) {
     _channelList.remove(channel);
+    _channelIDList.remove(channel.id);
 
     notifyListeners();
   }
@@ -171,16 +176,35 @@ class ChannelList extends ChangeNotifier {
     prefs.setStringList('Channel', _channelIDList);
   }
 
-  static Future<ChannelList> readFromStorage() async {
+  void fetchInBackground({required List<String> idList}) async {
+    for (String id in idList) {
+      await addChannelWithWebScropper(id: id);
+    }
+  }
+
+  //TODO: change to Prefer way
+  Future<bool> addChannelWithWebScropper({required String id}) async {
+    Channel? channel = await Channel.getByWebScroper(id);
+    if (channel != null) add(channel);
+    return channel != null;
+  }
+
+  static Future<ChannelList> readFromStorage(
+      {bool fetchBackground = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? idList = prefs.getStringList('Channel');
     ChannelList channelList = ChannelList();
 
-    for (String id in idList!) {
-      channelList.add(await Channel.getByWebScroper(id));
-    }
+    if (idList == null) return channelList;
 
+    if (fetchBackground) {
+      channelList.fetchInBackground(idList: idList);
+    } else {
+      for (String id in idList) {
+        await channelList.addChannelWithWebScropper(id: id);
+      }
+    }
     return channelList;
   }
 

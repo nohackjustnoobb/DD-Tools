@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
+import 'package:photo_view/photo_view.dart';
 import '../main.dart' show ChannelList, Channel;
+
+Widget avatar(
+    {required BuildContext context, required String url, double size = 50}) {
+  return GestureDetector(
+    onTap: () => showMaterialModalBottomSheet(
+        context: context,
+        barrierColor: Colors.black.withOpacity(0.8),
+        backgroundColor: Colors.transparent,
+        builder: (context) => PhotoView(
+              imageProvider: NetworkImage(url),
+              enableRotation: true,
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.covered * 2,
+              backgroundDecoration:
+                  const BoxDecoration(color: Colors.transparent),
+            )),
+    child: ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(size / 2)),
+        child: Image(image: NetworkImage(url), width: size, height: size)),
+  );
+}
 
 class Home extends StatelessWidget {
   const Home({Key? key}) : super(key: key);
@@ -51,7 +74,7 @@ class Home extends StatelessWidget {
                     ],
                   ),
                   const Icon(
-                    Icons.favorite,
+                    MdiIcons.heartBox,
                     color: Colors.white,
                     size: 30,
                   )
@@ -142,16 +165,18 @@ class Followed extends StatelessWidget {
                     )
                   ],
                 ),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => showBarModalBottomSheet(
-                      context: context,
-                      builder: (context) =>
-                          AddChannel(channelList: channelListObject)),
-                  child: Icon(
-                    MdiIcons.accountPlus,
-                    size: 28,
-                    color: Theme.of(context).primaryColor,
+                Container(
+                  padding: const EdgeInsets.only(right: 5),
+                  child: GestureDetector(
+                    onTap: () => showBarModalBottomSheet(
+                        context: context,
+                        builder: (context) =>
+                            AddChannel(channelList: channelListObject)),
+                    child: Icon(
+                      MdiIcons.accountPlus,
+                      size: 28,
+                      color: Theme.of(context).primaryColor,
+                    ),
                   ),
                 )
               ],
@@ -173,60 +198,189 @@ class Followed extends StatelessWidget {
                         children: <Widget>[
                           Row(
                             children: <Widget>[
-                              ClipRRect(
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(25)),
-                                child: Image(
-                                  image: NetworkImage(channel.thumbnail),
-                                  width: 50,
-                                  height: 50,
-                                ),
-                              ),
-                              Container(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    SizedBox(
-                                      width: MediaQuery.of(context).size.width *
-                                          0.6,
-                                      child: Text(
-                                        channel.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                            fontWeight: FontWeight.bold),
+                              avatar(context: context, url: channel.thumbnail),
+                              GestureDetector(
+                                onTap: () => showBarModalBottomSheet(
+                                    context: context,
+                                    builder: (BuildContext context) =>
+                                        ChannelInfo(
+                                          channelList: channelListObject,
+                                          channel: channel,
+                                        )),
+                                child: Container(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      SizedBox(
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                                0.6,
+                                        child: Text(
+                                          channel.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              color: Theme.of(context)
+                                                  .primaryColor,
+                                              fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      channel.subscriberCount ?? '',
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                          color: Theme.of(context)
-                                              .primaryColor
-                                              .withOpacity(0.8),
-                                          fontSize: 12),
-                                    )
-                                  ],
+                                      Text(
+                                        channel.subscriberCount ?? '',
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .primaryColor
+                                                .withOpacity(0.8),
+                                            fontSize: 12),
+                                      )
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.only(left: 10),
                                 ),
-                                padding: const EdgeInsets.only(left: 10),
                               )
                             ],
                           ),
-                          Icon(
-                            MdiIcons.dotsHorizontalCircle,
-                            color: Theme.of(context).primaryColor,
-                            size: 28,
+                          //TODO: add favourite to automatic add to playlist
+                          IconButton(
+                            onPressed: () {},
+                            icon: Icon(
+                              MdiIcons.heartOutline,
+                              color: Colors.red[400],
+                              size: 28,
+                            ),
+                            splashRadius: 20,
                           )
                         ],
                       );
                     }))
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(15, 20, 15, 0),
+        padding: const EdgeInsets.fromLTRB(15, 20, 10, 0),
       ),
     );
+  }
+}
+
+class ChannelInfo extends StatelessWidget {
+  final ChannelList channelList;
+  final Channel channel;
+
+  const ChannelInfo(
+      {Key? key, required this.channelList, required this.channel})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+        child: Container(
+      padding: const EdgeInsets.only(left: 15, right: 15, top: 15, bottom: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(7)),
+            child: Column(
+              children: [
+                if (channel.banner != null)
+                  Image(image: NetworkImage('${channel.banner}')),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  color: Theme.of(context).primaryColor,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Row(
+                        children: [
+                          avatar(context: context, url: channel.thumbnail),
+                          Container(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                SizedBox(
+                                    width:
+                                        MediaQuery.of(context).size.width - 160,
+                                    child: Text(
+                                      channel.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                    )),
+                                Text(
+                                  channel.subscriberCount ?? '',
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 12),
+                                )
+                              ],
+                            ),
+                            padding: const EdgeInsets.only(left: 10),
+                          )
+                        ],
+                      ),
+                      Container(
+                        decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10))),
+                        child: IconButton(
+                          onPressed: () async {
+                            String url =
+                                'https://www.youtube.com/channel/${channel.id}';
+                            if (await canLaunch(url)) {
+                              launch(url, forceSafariVC: false);
+                            }
+                          },
+                          iconSize: 40,
+                          padding: const EdgeInsets.all(0),
+                          icon: const Icon(
+                            MdiIcons.youtube,
+                            color: Colors.red,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+          Container(
+            height: 10,
+          ),
+          TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                channelList.remove(channel);
+              },
+              style: TextButton.styleFrom(
+                  primary: Colors.white, backgroundColor: Colors.red[400]),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    MdiIcons.accountMinus,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                  Container(
+                    width: 5,
+                  ),
+                  const Text(
+                    'Unfollow',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  )
+                ],
+              ))
+        ],
+      ),
+    ));
   }
 }
 
@@ -342,6 +496,23 @@ class AddChannelState extends State<AddChannel> {
   @override
   Widget build(BuildContext context) {
     TextEditingController _controller = TextEditingController();
+
+    void search() async {
+      String id = _controller.value.text;
+      if (id != '') {
+        if (id.contains('channel')) {
+          id = id.replaceAll('https://youtube.com/channel/', '');
+          if (id.length != 24) {
+            id.substring(0, id.indexOf('/'));
+          }
+        }
+        Channel? createdChannel = await Channel.getByWebScroper(id);
+        setState(() {
+          channel = createdChannel;
+        });
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(15),
       child: Column(
@@ -350,21 +521,20 @@ class AddChannelState extends State<AddChannel> {
             child: TextFormField(
               controller: _controller,
               cursorColor: Theme.of(context).primaryColor,
-              maxLength: 24,
+              textInputAction: TextInputAction.search,
+              onFieldSubmitted: (_) => search(),
+              maxLength: 100,
               decoration: InputDecoration(
                 icon: Icon(
                   MdiIcons.account,
                   color: Theme.of(context).primaryColor,
                 ),
                 labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                labelText: 'Channel ID',
+                labelText: 'Channel Link / ID',
                 suffixIcon: IconButton(
-                  onPressed: () async {
-                    Channel? createdChannel =
-                        await Channel.getByWebScroper(_controller.value.text);
-                    setState(() {
-                      channel = createdChannel;
-                    });
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    search();
                   },
                   icon: Icon(
                     MdiIcons.magnify,
@@ -398,15 +568,10 @@ class AddChannelState extends State<AddChannel> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
-                            ClipRRect(
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(30)),
-                              child: Image(
-                                image: NetworkImage(channel!.thumbnail),
-                                width: 60,
-                                height: 60,
-                              ),
-                            ),
+                            avatar(
+                                context: context,
+                                url: channel!.thumbnail,
+                                size: 60),
                             Container(
                               padding: const EdgeInsets.only(left: 15),
                               child: Column(
@@ -463,7 +628,7 @@ class AddChannelState extends State<AddChannel> {
                   style: TextButton.styleFrom(
                       primary: Colors.white,
                       backgroundColor: Colors.red[400],
-                      minimumSize: const Size(120, 40)),
+                      minimumSize: const Size(140, 40)),
                   onPressed: () => setState(() {
                         channel = null;
                       }),
@@ -477,7 +642,7 @@ class AddChannelState extends State<AddChannel> {
                           ? Colors.grey
                           : Theme.of(context).primaryColor,
                       primary: Colors.white,
-                      minimumSize: const Size(120, 40)),
+                      minimumSize: const Size(140, 40)),
                   onPressed: channel != null
                       ? () {
                           if (channel != null) {
