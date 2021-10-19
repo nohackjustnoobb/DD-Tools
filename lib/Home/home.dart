@@ -4,7 +4,9 @@ import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:photo_view/photo_view.dart';
-import '../main.dart' show ChannelList, Channel;
+
+import '../live_view/live_view.dart';
+import '../classes.dart';
 
 Widget avatar(
     {required BuildContext context, required String url, double size = 50}) {
@@ -102,39 +104,44 @@ class Home extends StatelessWidget {
       body: Consumer<ChannelList>(
         builder: (context, channelList, child) {
           return Column(children: [
-            Followed(
+            FollowedList(
               channelListObject: channelList,
             ),
-            Stream(streamList: channelList.getStreamList())
+            StreamList(
+              streamList: channelList.streamList,
+              channelList: channelList,
+            )
           ]);
         },
       ),
-      floatingActionButton: Container(
-        child: const Center(
-          child: Icon(
-            MdiIcons.televisionPlay,
-            color: Colors.white,
-            size: 43,
-          ),
-        ),
-        height: 70,
-        width: 70,
-        decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-            borderRadius: const BorderRadius.all(Radius.circular(35)),
-            boxShadow: <BoxShadow>[
-              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 6),
-            ]),
+      floatingActionButton: Transform.scale(
+        scale: 1.3,
+        child: FloatingActionButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => Consumer<ChannelList>(
+                      builder: (context, channelList, child) {
+                        return LiveView(channelList: channelList);
+                      },
+                    ))),
+            elevation: 2,
+            highlightElevation: 0,
+            backgroundColor: Theme.of(context).primaryColor,
+            child: const Icon(
+              MdiIcons.televisionPlay,
+              color: Colors.white,
+              size: 35,
+            )),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
 
-class Followed extends StatelessWidget {
+class FollowedList extends StatelessWidget {
   final ChannelList channelListObject;
 
-  const Followed({Key? key, required this.channelListObject}) : super(key: key);
+  const FollowedList({Key? key, required this.channelListObject})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -384,10 +391,13 @@ class ChannelInfo extends StatelessWidget {
   }
 }
 
-class Stream extends StatelessWidget {
-  final List<Map?>? streamList;
+class StreamList extends StatelessWidget {
+  final List<Stream?> streamList;
+  final ChannelList channelList;
 
-  const Stream({Key? key, this.streamList}) : super(key: key);
+  const StreamList(
+      {Key? key, required this.streamList, required this.channelList})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -406,8 +416,8 @@ class Stream extends StatelessWidget {
               ),
               Expanded(
                   child: ListView.separated(
-                      padding: const EdgeInsets.only(left: 10, right: 10),
-                      itemCount: streamList!.length,
+                      padding: const EdgeInsets.only(left: 10, right: 5),
+                      itemCount: streamList.length,
                       separatorBuilder: (BuildContext context, int index) =>
                           Divider(
                             indent: 40,
@@ -415,51 +425,79 @@ class Stream extends StatelessWidget {
                             color: Colors.black.withOpacity(0.3),
                           ),
                       itemBuilder: (BuildContext context, int index) {
-                        Map? stream = streamList![index];
+                        Map streamInfo = streamList[index]!.info;
+                        bool inPlaylist =
+                            channelList.playList.contains(streamList[index]);
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: <Widget>[
-                            Row(
-                              children: <Widget>[
-                                Image(
-                                  image: NetworkImage(stream!['thumbnail']),
-                                  width: 100,
-                                  height: 56.25,
-                                ),
-                                Container(
-                                  margin: const EdgeInsets.only(left: 10),
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.57,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        stream['title'],
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            color:
-                                                Theme.of(context).primaryColor),
-                                      ),
-                                      Text(
-                                        stream['owner'],
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .primaryColor
-                                                .withOpacity(0.7)),
-                                      )
-                                    ],
+                            GestureDetector(
+                              onTap: () => showBarModalBottomSheet(
+                                  context: context,
+                                  builder: (BuildContext context) => StreamInfo(
+                                      channelList: channelList,
+                                      stream: streamList[index])),
+                              child: Row(
+                                children: <Widget>[
+                                  Image(
+                                    image:
+                                        NetworkImage(streamInfo['thumbnail']),
+                                    width: 100,
+                                    height: 56.25,
                                   ),
-                                )
-                              ],
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 10),
+                                    width: MediaQuery.of(context).size.width *
+                                        0.55,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          streamInfo['title'],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              color: Theme.of(context)
+                                                  .primaryColor),
+                                        ),
+                                        Text(
+                                          streamInfo['ownerName'],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              color: Theme.of(context)
+                                                  .primaryColor
+                                                  .withOpacity(0.7)),
+                                        )
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
-                            Icon(
-                              MdiIcons.playlistPlus,
-                              size: 30,
-                              color: Theme.of(context).primaryColor,
+                            Material(
+                              color: Colors.transparent,
+                              child: IconButton(
+                                onPressed: () {
+                                  if (inPlaylist) {
+                                    channelList
+                                        .removePlayList(streamList[index]!.id);
+                                  } else {
+                                    channelList.addPlayList(streamList[index]);
+                                  }
+                                },
+                                iconSize: 30,
+                                icon: Icon(
+                                  inPlaylist
+                                      ? MdiIcons.playlistMinus
+                                      : MdiIcons.playlistPlus,
+                                  color: inPlaylist
+                                      ? Colors.red[400]
+                                      : Theme.of(context).primaryColor,
+                                ),
+                                splashRadius: 20,
+                              ),
                             )
                           ],
                         );
@@ -478,6 +516,194 @@ class Stream extends StatelessWidget {
                     blurRadius: 5)
               ]),
         ));
+  }
+}
+
+class StreamInfo extends StatelessWidget {
+  final ChannelList channelList;
+  final Stream? stream;
+
+  const StreamInfo({Key? key, required this.channelList, required this.stream})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    Channel? channel = channelList.getChannelWithStream(stream!);
+    Map streamInfo = stream!.info;
+    bool inPlaylist = channelList.playList.contains(stream);
+    return SafeArea(
+        child: Container(
+            padding:
+                const EdgeInsets.only(left: 15, right: 15, top: 15, bottom: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(7)),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        color: Theme.of(context).primaryColor,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+                                avatar(
+                                    context: context, url: channel!.thumbnail),
+                                Container(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      SizedBox(
+                                          width: MediaQuery.of(context)
+                                                  .size
+                                                  .width -
+                                              160,
+                                          child: Text(
+                                            channel.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold),
+                                          )),
+                                      Text(
+                                        channel.subscriberCount ?? '',
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.8),
+                                            fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.only(left: 10),
+                                )
+                              ],
+                            ),
+                            Container(
+                              decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
+                              child: IconButton(
+                                onPressed: () async {
+                                  String url =
+                                      'https://www.youtube.com/watch?v=${streamInfo['id']}';
+                                  if (await canLaunch(url)) {
+                                    launch(url, forceSafariVC: false);
+                                  }
+                                },
+                                iconSize: 35,
+                                padding: const EdgeInsets.all(0),
+                                icon: const Icon(
+                                  MdiIcons.youtubeTv,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 5),
+                  child: Row(
+                    children: <Widget>[
+                      if (streamInfo['thumbnail'] != null)
+                        Image(
+                          image: NetworkImage(streamInfo['thumbnail']),
+                          width: 100,
+                          height: 56.25,
+                        ),
+                      Container(
+                        margin: const EdgeInsets.only(left: 10),
+                        width: MediaQuery.of(context).size.width * 0.60,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              streamInfo['title'],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: Theme.of(context).primaryColor),
+                            ),
+                            Text(
+                              streamInfo['ownerName'],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.8)),
+                            ),
+                            Text(
+                              '${streamInfo['viewCount']} watching',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.6)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: 5,
+                ),
+                TextButton(
+                    onPressed: () {
+                      if (inPlaylist) {
+                        channelList.removePlayList(stream!.id);
+                      } else {
+                        channelList.addPlayList(stream);
+                      }
+                      Navigator.of(context).pop();
+                    },
+                    style: TextButton.styleFrom(
+                      primary: Colors.grey,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          inPlaylist
+                              ? MdiIcons.playlistMinus
+                              : MdiIcons.playlistPlus,
+                          size: 30,
+                          color: inPlaylist
+                              ? Colors.red[400]
+                              : Theme.of(context).primaryColor,
+                        ),
+                        Container(
+                          width: 5,
+                        ),
+                        Text(
+                          inPlaylist
+                              ? 'Remove From Playlist'
+                              : 'Add To Playlist',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: inPlaylist
+                                  ? Colors.red[400]
+                                  : Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold),
+                        )
+                      ],
+                    )),
+              ],
+            )));
   }
 }
 
@@ -501,8 +727,8 @@ class AddChannelState extends State<AddChannel> {
       String id = _controller.value.text;
       if (id != '') {
         if (id.contains('channel')) {
-          id = id.replaceAll('https://youtube.com/channel/', '');
-          if (id.length != 24) {
+          id = id.substring(id.indexOf('channel') + 8);
+          if (id.length > 24) {
             id.substring(0, id.indexOf('/'));
           }
         }
@@ -617,6 +843,14 @@ class AddChannelState extends State<AddChannel> {
                           ),
                         )
                     ],
+                  ),
+                )
+              else
+                Center(
+                  child: Text(
+                    'No Result',
+                    style: TextStyle(
+                        fontSize: 18, color: Colors.black.withOpacity(0.4)),
                   ),
                 )
             ],

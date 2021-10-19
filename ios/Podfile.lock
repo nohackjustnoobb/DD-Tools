@@ -1,5 +1,13 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_inappwebview (0.0.1):
+    - Flutter
+    - flutter_inappwebview/Core (= 0.0.1)
+    - OrderedSet (~> 5.0)
+  - flutter_inappwebview/Core (0.0.1):
+    - Flutter
+    - OrderedSet (~> 5.0)
+  - OrderedSet (5.0.0)
   - shared_preferences (0.0.1):
     - Flutter
   - touch_ripple_effect (0.0.1):
@@ -9,13 +17,20 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_inappwebview (from `.symlinks/plugins/flutter_inappwebview/ios`)
   - shared_preferences (from `.symlinks/plugins/shared_preferences/ios`)
   - touch_ripple_effect (from `.symlinks/plugins/touch_ripple_effect/ios`)
   - url_launcher (from `.symlinks/plugins/url_launcher/ios`)
 
+SPEC REPOS:
+  trunk:
+    - OrderedSet
+
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_inappwebview:
+    :path: ".symlinks/plugins/flutter_inappwebview/ios"
   shared_preferences:
     :path: ".symlinks/plugins/shared_preferences/ios"
   touch_ripple_effect:
@@ -25,6 +40,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 50d75fe2f02b26cc09d224853bb45737f8b3214a
+  flutter_inappwebview: bfd58618f49dc62f2676de690fc6dcda1d6c3721
+  OrderedSet: aaeb196f7fef5a9edf55d89760da9176ad40b93c
   shared_preferences: 5033afbb22d372e15aff8ff766df9021b845f273
   touch_ripple_effect: 5b850cbec069237959ef95e7e81e7ee7f934ac76
   url_launcher: b6e016d912f04be9f5bf6e8e82dc599b7ba59649
