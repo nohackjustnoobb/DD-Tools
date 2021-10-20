@@ -115,23 +115,30 @@ class Home extends StatelessWidget {
         },
       ),
       floatingActionButton: Transform.scale(
-        scale: 1.3,
-        child: FloatingActionButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => Consumer<ChannelList>(
-                      builder: (context, channelList, child) {
-                        return LiveView(channelList: channelList);
-                      },
-                    ))),
-            elevation: 2,
-            highlightElevation: 0,
-            backgroundColor: Theme.of(context).primaryColor,
-            child: const Icon(
-              MdiIcons.televisionPlay,
-              color: Colors.white,
-              size: 35,
-            )),
-      ),
+          scale: 1.3,
+          child: Consumer<ChannelList>(
+            builder: (context, channelList, child) {
+              return GestureDetector(
+                onLongPress: () => showBarModalBottomSheet(
+                    context: context,
+                    builder: (BuildContext context) =>
+                        PlayList(channelList: channelList)),
+                child: FloatingActionButton(
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                LiveView(channelList: channelList))),
+                    elevation: 2,
+                    highlightElevation: 0,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: const Icon(
+                      MdiIcons.televisionPlay,
+                      color: Colors.white,
+                      size: 35,
+                    )),
+              );
+            },
+          )),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
@@ -895,5 +902,93 @@ class AddChannelState extends State<AddChannel> {
         ],
       ),
     );
+  }
+}
+
+class PlayList extends StatefulWidget {
+  final ChannelList channelList;
+
+  const PlayList({Key? key, required this.channelList}) : super(key: key);
+
+  @override
+  PlayListState createState() => PlayListState();
+}
+
+class PlayListState extends State<PlayList> {
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+        child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        ListView.separated(
+          padding:
+              const EdgeInsets.only(left: 10, right: 5, bottom: 10, top: 10),
+          shrinkWrap: true,
+          itemCount: widget.channelList.playList.length,
+          separatorBuilder: (BuildContext context, int index) => Divider(
+            indent: 40,
+            endIndent: 40,
+            color: Colors.black.withOpacity(0.3),
+          ),
+          itemBuilder: (BuildContext context, int index) {
+            Map streamInfo = widget.channelList.playList[index].info;
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Image(
+                      image: NetworkImage(streamInfo['thumbnail']),
+                      width: 100,
+                      height: 56.25,
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(left: 10),
+                      width: MediaQuery.of(context).size.width * 0.55,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            streamInfo['title'],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Theme.of(context).primaryColor),
+                          ),
+                          Text(
+                            streamInfo['ownerName'],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.7)),
+                          )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: IconButton(
+                    onPressed: () {
+                      widget.channelList.removePlayList(
+                          widget.channelList.playList[index].id);
+                      setState(() {});
+                    },
+                    iconSize: 30,
+                    icon: Icon(MdiIcons.playlistMinus, color: Colors.red[400]),
+                    splashRadius: 20,
+                  ),
+                )
+              ],
+            );
+          },
+        ),
+      ],
+    ));
   }
 }

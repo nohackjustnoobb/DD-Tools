@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:html/parser.dart' show parse;
+import 'dart:io' show Platform;
 
 class Channel {
   String name, id, thumbnail, description;
@@ -121,6 +123,9 @@ class Stream {
   String title, id, owner, ownerName;
   int viewCount;
   String thumbnail;
+  YoutubePlayerIFrame? _player;
+  YoutubePlayerController? _controller;
+  bool isMuted = Platform.isIOS, isPlaying = true;
 
   Map get info => {
         'title': title,
@@ -130,6 +135,8 @@ class Stream {
         'viewCount': viewCount,
         'thumbnail': thumbnail
       };
+
+  YoutubePlayerIFrame? get player => _player;
 
   Stream(
       {required this.title,
@@ -177,6 +184,44 @@ class Stream {
       return null;
     }
   }
+
+  createPlayer() {
+    _controller = YoutubePlayerController(
+        initialVideoId: id,
+        params: YoutubePlayerParams(
+            showControls: false,
+            mute: Platform.isIOS,
+            autoPlay: true,
+            desktopMode: true));
+
+    _player = YoutubePlayerIFrame(
+      controller: _controller,
+      aspectRatio: 16 / 9,
+    );
+
+    return _player;
+  }
+
+  // control player
+  mute() {
+    _controller!.mute();
+    isMuted = true;
+  }
+
+  unMute() {
+    _controller!.unMute();
+    isMuted = false;
+  }
+
+  play() {
+    _controller!.play();
+    isPlaying = true;
+  }
+
+  pause() {
+    _controller!.pause();
+    isPlaying = false;
+  }
 }
 
 class ChannelList extends ChangeNotifier {
@@ -194,6 +239,12 @@ class ChannelList extends ChangeNotifier {
 
   ChannelList({apiKey}) : _apiKey = apiKey;
 
+  void save() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('Channel', _channelIDList);
+  }
+
+  // Channel
   void add(Channel channel) {
     if (!_channelIDList.contains(channel.id)) {
       _channelIDList.add(channel.id);
@@ -221,22 +272,17 @@ class ChannelList extends ChangeNotifier {
     notifyListeners();
   }
 
-  void save() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setStringList('Channel', _channelIDList);
+  //TODO: change to Prefer way
+  Future<bool> addChannelWithWebScropper({required String id}) async {
+    Channel? channel = await Channel.getByWebScroper(id);
+    if (channel != null) add(channel);
+    return channel != null;
   }
 
   void fetchInBackground({required List<String> idList}) async {
     for (String id in idList) {
       await addChannelWithWebScropper(id: id);
     }
-  }
-
-  //TODO: change to Prefer way
-  Future<bool> addChannelWithWebScropper({required String id}) async {
-    Channel? channel = await Channel.getByWebScroper(id);
-    if (channel != null) add(channel);
-    return channel != null;
   }
 
   static Future<ChannelList> readFromStorage(
@@ -258,8 +304,12 @@ class ChannelList extends ChangeNotifier {
     return channelList;
   }
 
+  // Playlist
   void addPlayList(Stream? stream) {
-    if (stream != null) _playList.add(stream);
+    if (stream != null) {
+      _playList.add(stream);
+      stream.createPlayer();
+    }
     notifyListeners();
   }
 
@@ -283,6 +333,31 @@ class ChannelList extends ChangeNotifier {
       return _channelList.firstWhere((element) => element.id == stream.owner);
     } catch (e) {
       return null;
+    }
+  }
+
+  // controller
+  muteAll() {
+    for (Stream stream in _playList) {
+      stream.mute();
+    }
+  }
+
+  unMuteAll() {
+    for (Stream stream in _playList) {
+      stream.unMute();
+    }
+  }
+
+  playAll() {
+    for (Stream stream in _playList) {
+      stream.play();
+    }
+  }
+
+  pauseAll() {
+    for (Stream stream in _playList) {
+      stream.pause();
     }
   }
 }
