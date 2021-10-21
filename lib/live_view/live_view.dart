@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'dart:io' show Platform;
-import 'dart:async';
+import 'package:provider/provider.dart';
+import '../Home/home.dart' show PlayList;
 
 import '../classes.dart';
 
 class LiveView extends StatelessWidget {
-  final ChannelList channelList;
-
-  const LiveView({Key? key, required this.channelList}) : super(key: key);
+  const LiveView({Key? key}) : super(key: key);
 
   double getFitPlayerWidth(screenWidth, screenHeight, listLength) {
     int itemPerRow = 1;
@@ -25,48 +24,50 @@ class LiveView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Timer(const Duration(seconds: 3), () => channelList.playAll());
-
-    double playerWidth = getFitPlayerWidth(MediaQuery.of(context).size.width,
-        MediaQuery.of(context).size.height, channelList.playList.length);
-
     return Scaffold(
       body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            Center(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 5,
-                runSpacing: 5,
-                runAlignment: WrapAlignment.spaceBetween,
-                children: channelList.playList
-                    .map(
-                      (e) => ClipRRect(
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(10)),
-                        child: Container(
-                            padding: const EdgeInsets.all(5),
-                            color: Theme.of(context).primaryColor,
-                            child: SizedBox(
-                                width: playerWidth,
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10)),
-                                  child: e.player,
-                                ))),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-            Controller(
-              channelList: channelList,
-            ),
-          ],
-        ),
-      ),
+          bottom: false,
+          child: Consumer<ChannelList>(
+            builder: (context, channelList, child) {
+              double playerWidth = getFitPlayerWidth(
+                  MediaQuery.of(context).size.width,
+                  MediaQuery.of(context).size.height,
+                  channelList.playList.length);
+              return Stack(
+                children: [
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 5,
+                      runSpacing: 5,
+                      runAlignment: WrapAlignment.spaceBetween,
+                      children: channelList.playList
+                          .map(
+                            (e) => ClipRRect(
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(10)),
+                              child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  color: Theme.of(context).primaryColor,
+                                  child: SizedBox(
+                                      width: playerWidth,
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.all(
+                                            Radius.circular(10)),
+                                        child: e.player,
+                                      ))),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                  Controller(
+                    channelList: channelList,
+                  ),
+                ],
+              );
+            },
+          )),
     );
   }
 }
@@ -166,37 +167,47 @@ class ControllerState extends State<Controller>
                       constraints: const BoxConstraints(),
                       splashRadius: 18,
                     ),
-                    Row(
-                      children: <Widget>[
-                        IconButton(
-                          onPressed: widget.channelList.playList.isEmpty
-                              ? null
-                              : () => showBarModalBottomSheet(
-                                  context: context,
-                                  builder: (context) => ControllerList(
-                                      channelList: widget.channelList)),
-                          iconSize: 28,
-                          icon: const Icon(MdiIcons.dotsHorizontalCircle),
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          color: Theme.of(context).primaryColor,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 18,
-                        ),
-                        IconButton(
-                          onPressed: () => isOpen
-                              ? animationController.forward()
-                              : animationController.reverse(),
-                          iconSize: 28,
-                          icon: Icon(isOpen
-                              ? MdiIcons.chevronLeft
-                              : MdiIcons.chevronRight),
-                          padding: EdgeInsets.zero,
-                          color: Theme.of(context).primaryColor,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 18,
-                        )
-                      ],
+                    IconButton(
+                      onPressed: widget.channelList.playList.isEmpty
+                          ? null
+                          : () => showBarModalBottomSheet(
+                              context: context,
+                              builder: (context) => ControllerList(
+                                  channelList: widget.channelList)),
+                      iconSize: 28,
+                      icon: const Icon(MdiIcons.dotsHorizontal),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      color: Theme.of(context).primaryColor,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
                     ),
+                    IconButton(
+                      onPressed: () => showBarModalBottomSheet(
+                          context: context,
+                          builder: (context) => PlayList(
+                                channelList: widget.channelList,
+                                isInPlaylist: false,
+                              )),
+                      iconSize: 28,
+                      icon: const Icon(MdiIcons.plus),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      color: Theme.of(context).primaryColor,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
+                    ),
+                    IconButton(
+                      onPressed: () => isOpen
+                          ? animationController.forward()
+                          : animationController.reverse(),
+                      iconSize: 28,
+                      icon: Icon(isOpen
+                          ? MdiIcons.chevronLeft
+                          : MdiIcons.chevronRight),
+                      padding: EdgeInsets.zero,
+                      color: Theme.of(context).primaryColor,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
+                    )
                   ],
                 ),
               ),
@@ -298,6 +309,20 @@ class ControllerListState extends State<ControllerList> {
                           : MdiIcons.volumeHigh),
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       color: Theme.of(context).primaryColor,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() {
+                        if (widget.channelList.playList.length == 1) {
+                          Navigator.of(context).pop();
+                        }
+                        widget.channelList.removePlayList(stream.id);
+                      }),
+                      iconSize: 28,
+                      icon: const Icon(MdiIcons.playlistMinus),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      color: Colors.red[400],
                       constraints: const BoxConstraints(),
                       splashRadius: 18,
                     ),

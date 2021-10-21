@@ -116,28 +116,25 @@ class Home extends StatelessWidget {
       ),
       floatingActionButton: Transform.scale(
           scale: 1.3,
-          child: Consumer<ChannelList>(
-            builder: (context, channelList, child) {
-              return GestureDetector(
-                onLongPress: () => showBarModalBottomSheet(
-                    context: context,
-                    builder: (BuildContext context) =>
-                        PlayList(channelList: channelList)),
-                child: FloatingActionButton(
-                    onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (context) =>
-                                LiveView(channelList: channelList))),
-                    elevation: 2,
-                    highlightElevation: 0,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: const Icon(
-                      MdiIcons.televisionPlay,
-                      color: Colors.white,
-                      size: 35,
+          child: GestureDetector(
+            onLongPress: () => showBarModalBottomSheet(
+                context: context,
+                builder: (BuildContext context) => Consumer<ChannelList>(
+                      builder: (context, channelList, child) {
+                        return PlayList(channelList: channelList);
+                      },
                     )),
-              );
-            },
+            child: FloatingActionButton(
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (context) => LiveView())),
+                elevation: 2,
+                highlightElevation: 0,
+                backgroundColor: Theme.of(context).primaryColor,
+                child: const Icon(
+                  MdiIcons.televisionPlay,
+                  color: Colors.white,
+                  size: 35,
+                )),
           )),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -185,7 +182,7 @@ class FollowedList extends StatelessWidget {
                     onTap: () => showBarModalBottomSheet(
                         context: context,
                         builder: (context) =>
-                            AddChannel(channelList: channelListObject)),
+                            Add(channelList: channelListObject)),
                     child: Icon(
                       MdiIcons.accountPlus,
                       size: 28,
@@ -714,38 +711,55 @@ class StreamInfo extends StatelessWidget {
   }
 }
 
-class AddChannel extends StatefulWidget {
+class Add extends StatefulWidget {
   final ChannelList channelList;
+  final bool isChannel;
 
-  const AddChannel({Key? key, required this.channelList}) : super(key: key);
+  const Add({Key? key, required this.channelList, this.isChannel = true})
+      : super(key: key);
 
   @override
-  AddChannelState createState() => AddChannelState();
+  AddState createState() => AddState();
 }
 
-class AddChannelState extends State<AddChannel> {
+class AddState extends State<Add> {
   Channel? channel;
+  Stream? stream;
+
+  final TextEditingController _controller = TextEditingController();
+  void searchChannel() async {
+    String id = _controller.value.text;
+    if (id != '') {
+      if (id.contains('channel')) {
+        id = id.substring(id.indexOf('channel') + 8);
+        if (id.length > 24) {
+          id.substring(0, id.indexOf('/'));
+        }
+      }
+      Channel? createdChannel = await Channel.getByWebScroper(id);
+      _controller.clear();
+      setState(() {
+        channel = createdChannel;
+      });
+    }
+  }
+
+  void searchStream() async {
+    String id = _controller.value.text;
+    if (id != '') {
+      if (id.contains('watch')) {
+        id = id.substring(id.indexOf('watch') + 8);
+      }
+      Stream? createdStream = await Stream.getByWebScroper(id);
+      _controller.clear();
+      setState(() {
+        stream = createdStream;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    TextEditingController _controller = TextEditingController();
-
-    void search() async {
-      String id = _controller.value.text;
-      if (id != '') {
-        if (id.contains('channel')) {
-          id = id.substring(id.indexOf('channel') + 8);
-          if (id.length > 24) {
-            id.substring(0, id.indexOf('/'));
-          }
-        }
-        Channel? createdChannel = await Channel.getByWebScroper(id);
-        setState(() {
-          channel = createdChannel;
-        });
-      }
-    }
-
     return Container(
       padding: const EdgeInsets.all(15),
       child: Column(
@@ -755,7 +769,8 @@ class AddChannelState extends State<AddChannel> {
               controller: _controller,
               cursorColor: Theme.of(context).primaryColor,
               textInputAction: TextInputAction.search,
-              onFieldSubmitted: (_) => search(),
+              onFieldSubmitted: (_) =>
+                  widget.isChannel ? searchChannel() : searchStream(),
               maxLength: 100,
               decoration: InputDecoration(
                 icon: Icon(
@@ -763,11 +778,12 @@ class AddChannelState extends State<AddChannel> {
                   color: Theme.of(context).primaryColor,
                 ),
                 labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                labelText: 'Channel Link / ID',
+                labelText:
+                    widget.isChannel ? 'Channel Link / ID' : 'Strean Link / ID',
                 suffixIcon: IconButton(
                   onPressed: () {
                     FocusScope.of(context).unfocus();
-                    search();
+                    widget.isChannel ? searchChannel() : searchStream();
                   },
                   icon: Icon(
                     MdiIcons.magnify,
@@ -852,6 +868,65 @@ class AddChannelState extends State<AddChannel> {
                     ],
                   ),
                 )
+              else if (stream != null)
+                Column(
+                  children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        avatar(context: context, url: stream!.ownerThumbnail),
+                        Container(
+                          width: 10,
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              stream!.ownerName,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor),
+                            ),
+                            Text(
+                              stream!.owner,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.8)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      height: 10,
+                    ),
+                    ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(10)),
+                      child: Container(
+                        color: Theme.of(context).primaryColor,
+                        width: MediaQuery.of(context).size.width * 0.9,
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          children: <Widget>[
+                            Image(
+                              image: NetworkImage(stream!.thumbnail),
+                            ),
+                            Container(
+                              height: 5,
+                            ),
+                            Text(
+                              stream!.title,
+                              style: const TextStyle(color: Colors.white),
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                  ],
+                )
               else
                 Center(
                   child: Text(
@@ -872,6 +947,7 @@ class AddChannelState extends State<AddChannel> {
                       minimumSize: const Size(140, 40)),
                   onPressed: () => setState(() {
                         channel = null;
+                        stream = null;
                       }),
                   child: const Text(
                     'Clear',
@@ -879,18 +955,20 @@ class AddChannelState extends State<AddChannel> {
                   )),
               TextButton(
                   style: TextButton.styleFrom(
-                      backgroundColor: channel == null
+                      backgroundColor: channel == null && stream == null
                           ? Colors.grey
                           : Theme.of(context).primaryColor,
                       primary: Colors.white,
                       minimumSize: const Size(140, 40)),
-                  onPressed: channel != null
+                  onPressed: channel != null || stream != null
                       ? () {
                           if (channel != null) {
-                            Navigator.of(context).pop(context);
                             widget.channelList.add(channel!);
                             widget.channelList.save();
+                          } else if (stream != null) {
+                            widget.channelList.addPlayList(stream);
                           }
+                          Navigator.of(context).pop(context);
                         }
                       : null,
                   child: const Text(
@@ -907,8 +985,11 @@ class AddChannelState extends State<AddChannel> {
 
 class PlayList extends StatefulWidget {
   final ChannelList channelList;
+  final bool isInPlaylist;
 
-  const PlayList({Key? key, required this.channelList}) : super(key: key);
+  const PlayList(
+      {Key? key, required this.channelList, this.isInPlaylist = true})
+      : super(key: key);
 
   @override
   PlayListState createState() => PlayListState();
@@ -917,6 +998,12 @@ class PlayList extends StatefulWidget {
 class PlayListState extends State<PlayList> {
   @override
   Widget build(BuildContext context) {
+    List<Stream?> playlist = widget.isInPlaylist
+        ? widget.channelList.playList
+        : widget.channelList.streamList
+            .where((element) => !widget.channelList.playList.contains(element))
+            .toList();
+
     return SafeArea(
         child: Column(
       mainAxisSize: MainAxisSize.min,
@@ -925,14 +1012,14 @@ class PlayListState extends State<PlayList> {
           padding:
               const EdgeInsets.only(left: 10, right: 5, bottom: 10, top: 10),
           shrinkWrap: true,
-          itemCount: widget.channelList.playList.length,
+          itemCount: playlist.length,
           separatorBuilder: (BuildContext context, int index) => Divider(
             indent: 40,
             endIndent: 40,
             color: Colors.black.withOpacity(0.3),
           ),
           itemBuilder: (BuildContext context, int index) {
-            Map streamInfo = widget.channelList.playList[index].info;
+            Map streamInfo = playlist[index]!.info;
 
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -975,12 +1062,19 @@ class PlayListState extends State<PlayList> {
                   color: Colors.transparent,
                   child: IconButton(
                     onPressed: () {
-                      widget.channelList.removePlayList(
-                          widget.channelList.playList[index].id);
+                      widget.isInPlaylist
+                          ? widget.channelList
+                              .removePlayList(playlist[index]!.id)
+                          : widget.channelList.addPlayList(playlist[index]);
                       setState(() {});
                     },
                     iconSize: 30,
-                    icon: Icon(MdiIcons.playlistMinus, color: Colors.red[400]),
+                    icon: widget.isInPlaylist
+                        ? Icon(MdiIcons.playlistMinus, color: Colors.red[400])
+                        : Icon(
+                            MdiIcons.playlistPlus,
+                            color: Theme.of(context).primaryColor,
+                          ),
                     splashRadius: 20,
                   ),
                 )
@@ -988,6 +1082,65 @@ class PlayListState extends State<PlayList> {
             );
           },
         ),
+        Row(
+          children: <Widget>[
+            Expanded(
+                child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                TextButton(
+                    style: TextButton.styleFrom(
+                        primary: Colors.white,
+                        backgroundColor:
+                            playlist.isEmpty ? Colors.grey : Colors.red[400],
+                        minimumSize: const Size(150, 0)),
+                    onPressed: playlist.isEmpty
+                        ? null
+                        : () => setState(() {
+                              widget.isInPlaylist
+                                  ? widget.channelList.clearPlayList()
+                                  : widget.channelList
+                                      .addMultiplePlayList(playlist);
+                            }),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(
+                          widget.isInPlaylist ? MdiIcons.minus : MdiIcons.plus,
+                          color: Colors.white,
+                        ),
+                        Text(
+                          '${widget.isInPlaylist ? 'Remove' : 'Add'} Listed',
+                          style: const TextStyle(color: Colors.white),
+                        )
+                      ],
+                    )),
+                TextButton(
+                    style: TextButton.styleFrom(
+                      primary: Colors.white,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      minimumSize: const Size(150, 0),
+                    ),
+                    onPressed: () => showBarModalBottomSheet(
+                        context: context,
+                        builder: (BuildContext context) => Add(
+                              channelList: widget.channelList,
+                              isChannel: false,
+                            )),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const <Widget>[
+                        Icon(MdiIcons.plus),
+                        Text(
+                          'Add Stream',
+                          style: TextStyle(color: Colors.white),
+                        )
+                      ],
+                    )),
+              ],
+            ))
+          ],
+        )
       ],
     ));
   }

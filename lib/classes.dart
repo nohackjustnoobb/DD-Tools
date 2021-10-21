@@ -21,8 +21,8 @@ class Channel {
       this.banner,
       this.stream});
 
-  static dynamic decodeStreamWithRawData(
-      Map<String, dynamic> rawData, String owner, String ownerName) {
+  static dynamic decodeStreamWithRawData(Map<String, dynamic> rawData,
+      String owner, String ownerName, String ownerThumbnail) {
     try {
       var streamItem = rawData['contents']['twoColumnBrowseResultsRenderer']
                   ['tabs'][0]['tabRenderer']['content']['sectionListRenderer']
@@ -36,7 +36,8 @@ class Channel {
           viewCount: int.parse(streamItem['viewCountText']['runs'][0]['text']
               .toString()
               .replaceAll(',', '')),
-          ownerName: ownerName);
+          ownerName: ownerName,
+          ownerThumbnail: ownerThumbnail);
     } catch (e) {
       return null;
     }
@@ -71,7 +72,10 @@ class Channel {
                 ['url'],
             description: channelMetadataRenderer['description'],
             stream: decodeStreamWithRawData(
-                initialData, id, channelMetadataRenderer['title']),
+                initialData,
+                id,
+                channelMetadataRenderer['title'],
+                channelMetadataRenderer['avatar']['thumbnails'][0]['url']),
             subscriberCount: c4TabbedHeaderRenderer['subscriberCountText']
                 ['simpleText'],
             banner: c4TabbedHeaderRenderer['mobileBanner']?['thumbnails']
@@ -103,11 +107,7 @@ class Channel {
           .replaceAll('var ytInitialData = ', '')
           .replaceAll(';', ''));
 
-      stream = decodeStreamWithRawData(
-        initialData,
-        id,
-        name,
-      );
+      stream = decodeStreamWithRawData(initialData, id, name, thumbnail);
       return stream;
     } else {
       const AlertDialog(
@@ -120,7 +120,7 @@ class Channel {
 }
 
 class Stream {
-  String title, id, owner, ownerName;
+  String title, id, owner, ownerName, ownerThumbnail;
   int viewCount;
   String thumbnail;
   YoutubePlayerIFrame? _player;
@@ -133,7 +133,8 @@ class Stream {
         'owner': owner,
         'ownerName': ownerName,
         'viewCount': viewCount,
-        'thumbnail': thumbnail
+        'thumbnail': thumbnail,
+        'ownerThumbnail': ownerThumbnail
       };
 
   YoutubePlayerIFrame? get player => _player;
@@ -143,36 +144,50 @@ class Stream {
       required this.id,
       required this.owner,
       required this.viewCount,
-      required this.ownerName})
+      required this.ownerName,
+      required this.ownerThumbnail})
       : thumbnail = 'https://i.ytimg.com/vi/$id/maxresdefault_live.jpg';
 
   static Future getByWebScroper(id) async {
     final response = await http.get(
-        Uri.parse('https://www.youtube.com/channel/$id'),
+        Uri.parse('https://www.youtube.com/watch?v=$id'),
         headers: {'Accept-Language': 'en-US'});
 
     if (response.statusCode == 200) {
-      // Decode
-      Map<String, dynamic> initialPlayerResponse = jsonDecode(
-          parse(response.body)
-              .getElementsByTagName('Script')
-              .where((element) =>
-                  element.text.contains('var ytInitialPlayerResponse'))
-              .toList()[0]
-              .text
-              .replaceAll('var ytInitialPlayerResponse = ', '')
-              .replaceAll(';', ''));
-
       try {
+        // Decode
+        Map<String, dynamic> initialPlayerResponse = jsonDecode(
+            parse(response.body)
+                .getElementsByTagName('Script')
+                .where((element) =>
+                    element.text.contains('var ytInitialPlayerResponse'))
+                .toList()[0]
+                .text
+                .replaceAll('var ytInitialPlayerResponse = ', '')
+                .replaceAll(';', ''));
+
         Map playerMicroformatRenderer =
             initialPlayerResponse['microformat']['playerMicroformatRenderer'];
 
+        Map<String, dynamic> initialData = jsonDecode(parse(response.body)
+            .getElementsByTagName('Script')
+            .where((element) => element.text.contains('var ytInitialData'))
+            .toList()[0]
+            .text
+            .replaceAll('var ytInitialData = ', '')
+            .replaceAll(';', ''));
+
         return Stream(
-            title: playerMicroformatRenderer['title'],
+            title: playerMicroformatRenderer['title']['simpleText'],
             id: id,
             owner: playerMicroformatRenderer['externalChannelId'],
             ownerName: playerMicroformatRenderer['ownerChannelName'],
-            viewCount: int.parse(playerMicroformatRenderer['viewCount']));
+            viewCount: int.parse(playerMicroformatRenderer['viewCount']),
+            ownerThumbnail: initialData['contents']['twoColumnWatchNextResults']
+                    ['results']['results']['contents']
+                .last['videoSecondaryInfoRenderer']['owner']
+                    ['videoOwnerRenderer']['thumbnail']['thumbnails']
+                .last['url']);
       } catch (e) {
         return null;
       }
@@ -285,39 +300,39 @@ class ChannelList extends ChangeNotifier {
     }
   }
 
-  static Future<ChannelList> readFromStorage(
-      {bool fetchBackground = false}) async {
+  Future<void> readFromStorage({bool fetchBackground = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? idList = prefs.getStringList('Channel');
-    ChannelList channelList = ChannelList();
 
-    if (idList == null) return channelList;
+    if (idList == null) return;
 
     if (fetchBackground) {
-      channelList.fetchInBackground(idList: idList);
+      fetchInBackground(idList: idList);
     } else {
       for (String id in idList) {
-        await channelList.addChannelWithWebScropper(id: id);
+        await addChannelWithWebScropper(id: id);
       }
     }
-    return channelList;
+    return;
   }
 
   // Playlist
   void addPlayList(Stream? stream) {
-    if (stream != null) {
+    if (stream != null && !_playList.contains(stream)) {
       _playList.add(stream);
       stream.createPlayer();
     }
     notifyListeners();
   }
 
-  void addPlayListWithID(String id) async {
-    Stream? stream = await Stream.getByWebScroper(id);
-
-    if (stream != null) {
-      addPlayList(stream);
+  void addMultiplePlayList(List<Stream?> streamList) {
+    List<Stream> streamListFiltered = streamList.whereType<Stream>().toList();
+    if (streamListFiltered.isNotEmpty) {
+      _playList.addAll(streamListFiltered);
+      for (var stream in streamListFiltered) {
+        stream.createPlayer();
+      }
       notifyListeners();
     }
   }
@@ -325,6 +340,11 @@ class ChannelList extends ChangeNotifier {
   void removePlayList(String id) {
     Stream? stream = _playList.firstWhere((element) => element.id == id);
     _playList.remove(stream);
+    notifyListeners();
+  }
+
+  void clearPlayList() {
+    _playList.clear();
     notifyListeners();
   }
 

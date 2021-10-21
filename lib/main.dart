@@ -5,8 +5,8 @@ import 'classes.dart';
 import 'Home/home.dart';
 
 void main() async {
-  ChannelList channelList =
-      await ChannelList.readFromStorage(fetchBackground: true);
+  ChannelList channelList = ChannelList();
+  await channelList.readFromStorage(fetchBackground: true);
 
   runApp(
     ChangeNotifierProvider.value(value: channelList, child: const App()),
