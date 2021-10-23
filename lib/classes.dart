@@ -139,15 +139,19 @@ class Channel {
 
       if (response.statusCode == 200) {
         // Decode
-        Map<String, dynamic> initialData = jsonDecode(response.body
+        Map<String, dynamic> playerVars = jsonDecode(response.body
             .substring(response.body.indexOf('embedded_player_response') + 27,
                 response.body.lastIndexOf('video_id') - 3)
             .replaceAll('\\"', '"'));
 
+        if (playerVars['previewPlayabilityStatus']['status'] != 'OK') {
+          throw Exception('');
+        }
+
         stream = Stream(
-            title: initialData['embedPreview']['thumbnailPreviewRenderer']
+            title: playerVars['embedPreview']['thumbnailPreviewRenderer']
                 ['title']['runs'][0]['text'],
-            id: initialData['embedPreview']['thumbnailPreviewRenderer']
+            id: playerVars['embedPreview']['thumbnailPreviewRenderer']
                     ['playButton']['buttonRenderer']['navigationEndpoint']
                 ['watchEndpoint']['videoId'],
             owner: id,
