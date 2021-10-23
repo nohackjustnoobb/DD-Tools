@@ -10,7 +10,6 @@ class Channel {
   String name, id, thumbnail, description;
   String? subscriberCount, banner;
   Stream? stream;
-  String? _apiKey;
 
   Channel(
       {required this.name,
@@ -21,23 +20,44 @@ class Channel {
       this.banner,
       this.stream});
 
-  static dynamic decodeStreamWithRawData(Map<String, dynamic> rawData,
-      String owner, String ownerName, String ownerThumbnail) {
+  static Future getByAPI({id, api, ChannelList? channelList}) async {
     try {
-      var streamItem = rawData['contents']['twoColumnBrowseResultsRenderer']
-                  ['tabs'][0]['tabRenderer']['content']['sectionListRenderer']
-              ['contents'][0]['itemSectionRenderer']['contents'][0]
-          ['channelFeaturedContentRenderer']['items'][0]['videoRenderer'];
+      final response = await http.get(Uri.parse(
+          'https://youtube.googleapis.com/youtube/v3/channels?part=statistics&part=snippet&part=brandingSettings&id=$id&key=$api'));
+      if (response.statusCode == 200) {
+        Map channelData = jsonDecode(response.body)['items'][0];
 
-      return Stream(
-          title: streamItem['title']['runs'][0]['text'],
-          id: streamItem['videoId'],
-          owner: owner,
-          viewCount: int.parse(streamItem['viewCountText']['runs'][0]['text']
-              .toString()
-              .replaceAll(',', '')),
-          ownerName: ownerName,
-          ownerThumbnail: ownerThumbnail);
+        int subscriberCount =
+            int.parse(channelData['statistics']['subscriberCount']);
+
+        String toString(int value) {
+          const units = <int, String>{
+            1000000000: 'B',
+            1000000: 'M',
+            1000: 'K',
+          };
+          return units.entries
+              .map((e) => '${value ~/ e.key}${e.value}')
+              .firstWhere((e) => !e.startsWith('0'), orElse: () => '$value');
+        }
+
+        Channel channel = Channel(
+            name: channelData['snippet']['title'],
+            id: id,
+            thumbnail: channelData['snippet']['thumbnails']['high']['url'],
+            description: channelData['snippet']['description'],
+            subscriberCount: '${toString(subscriberCount)} subscribers',
+            banner: channelData['brandingSettings']['image']
+                ['bannerExternalUrl']);
+
+        channel.updateStreamByWebScropper(channelList: channelList);
+
+        return channel;
+      } else if (response.statusCode == 403) {
+        return Exception('reachQuotaLimit');
+      } else {
+        throw Exception();
+      }
     } catch (e) {
       return null;
     }
@@ -65,17 +85,36 @@ class Channel {
         Map<String, dynamic> c4TabbedHeaderRenderer =
             initialData['header']['c4TabbedHeaderRenderer'];
 
+        Stream? stream;
+        try {
+          var streamItem = initialData['contents']
+                          ['twoColumnBrowseResultsRenderer']['tabs'][0]
+                      ['tabRenderer']['content']['sectionListRenderer']
+                  ['contents'][0]['itemSectionRenderer']['contents'][0]
+              ['channelFeaturedContentRenderer']['items'][0]['videoRenderer'];
+
+          stream = Stream(
+              title: streamItem['title']['runs'][0]['text'],
+              id: streamItem['videoId'],
+              owner: id,
+              viewCount: int.parse(streamItem['viewCountText']['runs'][0]
+                      ['text']
+                  .toString()
+                  .replaceAll(',', '')),
+              ownerName: channelMetadataRenderer['title'],
+              ownerThumbnail: channelMetadataRenderer['avatar']['thumbnails'][0]
+                  ['url']);
+        } catch (e) {
+          stream = null;
+        }
+
         return Channel(
             name: channelMetadataRenderer['title'],
             id: id,
             thumbnail: channelMetadataRenderer['avatar']['thumbnails'][0]
                 ['url'],
             description: channelMetadataRenderer['description'],
-            stream: decodeStreamWithRawData(
-                initialData,
-                id,
-                channelMetadataRenderer['title'],
-                channelMetadataRenderer['avatar']['thumbnails'][0]['url']),
+            stream: stream,
             subscriberCount: c4TabbedHeaderRenderer['subscriberCountText']
                 ['simpleText'],
             banner: c4TabbedHeaderRenderer['mobileBanner']?['thumbnails']
@@ -92,24 +131,39 @@ class Channel {
     }
   }
 
-  dynamic updateStreamByWebScropper() async {
-    final response = await http.get(
-        Uri.parse('https://www.youtube.com/channel/$id'),
-        headers: {'Accept-Language': 'en-US'});
+  dynamic updateStreamByWebScropper({ChannelList? channelList}) async {
+    try {
+      final response = await http.get(
+          Uri.parse('https://www.youtube.com/embed/live_stream?channel=$id'),
+          headers: {'Accept-Language': 'en-US'});
 
-    if (response.statusCode == 200) {
-      // Decode
-      Map<String, dynamic> initialData = jsonDecode(parse(response.body)
-          .getElementsByTagName('Script')
-          .where((element) => element.text.contains('var ytInitialData'))
-          .toList()[0]
-          .text
-          .replaceAll('var ytInitialData = ', '')
-          .replaceAll(';', ''));
+      if (response.statusCode == 200) {
+        // Decode
+        Map<String, dynamic> initialData = jsonDecode(response.body
+            .substring(response.body.indexOf('embedded_player_response') + 27,
+                response.body.lastIndexOf('video_id') - 3)
+            .replaceAll('\\"', '"'));
 
-      stream = decodeStreamWithRawData(initialData, id, name, thumbnail);
-      return stream;
-    } else {
+        stream = Stream(
+            title: initialData['embedPreview']['thumbnailPreviewRenderer']
+                ['title']['runs'][0]['text'],
+            id: initialData['embedPreview']['thumbnailPreviewRenderer']
+                    ['playButton']['buttonRenderer']['navigationEndpoint']
+                ['watchEndpoint']['videoId'],
+            owner: id,
+            ownerName: name,
+            ownerThumbnail: thumbnail);
+
+        if (channelList != null) {
+          // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+          channelList.notifyListeners();
+        }
+
+        return stream;
+      } else {
+        throw Exception();
+      }
+    } catch (e) {
       const AlertDialog(
         title: Text('Fail to fetch stream info.'),
       );
@@ -121,11 +175,11 @@ class Channel {
 
 class Stream {
   String title, id, owner, ownerName, ownerThumbnail;
-  int viewCount;
+  int? viewCount;
   String thumbnail;
   YoutubePlayerIFrame? _player;
   YoutubePlayerController? _controller;
-  bool isMuted = Platform.isIOS, isPlaying = true;
+  bool isMuted = true, isPlaying = true;
 
   Map get info => {
         'title': title,
@@ -143,7 +197,7 @@ class Stream {
       {required this.title,
       required this.id,
       required this.owner,
-      required this.viewCount,
+      this.viewCount,
       required this.ownerName,
       required this.ownerThumbnail})
       : thumbnail = 'https://i.ytimg.com/vi/$id/maxresdefault_live.jpg';
@@ -201,6 +255,7 @@ class Stream {
   }
 
   createPlayer() {
+    //TODO: android have same problem with ios
     _controller = YoutubePlayerController(
         initialVideoId: id,
         params: YoutubePlayerParams(
@@ -243,7 +298,8 @@ class ChannelList extends ChangeNotifier {
   final _channelList = <Channel>[];
   final _channelIDList = <String>[];
   final _playList = <Stream>[];
-  final String? _apiKey;
+  String? _apiKey;
+  bool keyReachLimit = false;
 
   List<Channel> get channelList => _channelList;
   List<Stream> get playList => _playList;
@@ -252,11 +308,41 @@ class ChannelList extends ChangeNotifier {
       .map((e) => e.stream)
       .toList();
 
+  bool get isUsingAPI => _apiKey != null;
+  String get apiKey => _apiKey.toString();
+
   ChannelList({apiKey}) : _apiKey = apiKey;
 
   void save() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setStringList('Channel', _channelIDList);
+  }
+
+  // API
+  Future<bool> setAPIKey(String key) async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://youtube.googleapis.com/youtube/v3/activities?part=id&channelId=UC_x5XG1OV2P6uZZ5FSM9Ttw&key=$key'));
+      if (response.statusCode == 200) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('API', key);
+        _apiKey = key;
+        notifyListeners();
+        return true;
+      } else {
+        throw Exception('API Key is not valid');
+      }
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void removeKey() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.remove('API');
+    _apiKey = null;
+    keyReachLimit = false;
+    notifyListeners();
   }
 
   // Channel
@@ -287,16 +373,24 @@ class ChannelList extends ChangeNotifier {
     notifyListeners();
   }
 
-  //TODO: change to Prefer way
-  Future<bool> addChannelWithWebScropper({required String id}) async {
-    Channel? channel = await Channel.getByWebScroper(id);
+  Future<bool> addChannelWithPreferWay({required String id}) async {
+    Channel? channel;
+    if (_apiKey != null && !keyReachLimit) {
+      channel = await Channel.getByAPI(id: id, api: _apiKey, channelList: this);
+      if (channel is Exception) {
+        keyReachLimit = true;
+        addChannelWithPreferWay(id: id);
+      }
+    } else {
+      channel = await Channel.getByWebScroper(id);
+    }
     if (channel != null) add(channel);
     return channel != null;
   }
 
   void fetchInBackground({required List<String> idList}) async {
     for (String id in idList) {
-      await addChannelWithWebScropper(id: id);
+      await addChannelWithPreferWay(id: id);
     }
   }
 
@@ -304,6 +398,7 @@ class ChannelList extends ChangeNotifier {
     WidgetsFlutterBinding.ensureInitialized();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? idList = prefs.getStringList('Channel');
+    _apiKey = prefs.getString('API');
 
     if (idList == null) return;
 
@@ -311,7 +406,7 @@ class ChannelList extends ChangeNotifier {
       fetchInBackground(idList: idList);
     } else {
       for (String id in idList) {
-        await addChannelWithWebScropper(id: id);
+        await addChannelWithPreferWay(id: id);
       }
     }
     return;

@@ -7,6 +7,7 @@ import 'package:photo_view/photo_view.dart';
 
 import '../live_view/live_view.dart';
 import '../classes.dart';
+import '../settings/settings.dart';
 
 Widget avatar(
     {required BuildContext context, required String url, double size = 50}) {
@@ -46,10 +47,21 @@ class Home extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  const Icon(
-                    Icons.tune,
-                    color: Colors.white,
-                    size: 30,
+                  Material(
+                    color: Colors.transparent,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (BuildContext context) =>
+                                  const Settings())),
+                      padding: EdgeInsets.zero,
+                      iconSize: 30,
+                      icon: const Icon(
+                        Icons.tune,
+                        color: Colors.white,
+                      ),
+                      splashRadius: 20,
+                    ),
                   ),
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -75,11 +87,19 @@ class Home extends StatelessWidget {
                       )
                     ],
                   ),
-                  const Icon(
-                    MdiIcons.heartBox,
-                    color: Colors.white,
-                    size: 30,
-                  )
+                  Material(
+                    color: Colors.transparent,
+                    child: IconButton(
+                      onPressed: () {},
+                      padding: EdgeInsets.zero,
+                      iconSize: 30,
+                      icon: const Icon(
+                        MdiIcons.heartBox,
+                        color: Colors.white,
+                      ),
+                      splashRadius: 20,
+                    ),
+                  ),
                 ],
               )
             ],
@@ -125,8 +145,8 @@ class Home extends StatelessWidget {
                       },
                     )),
             child: FloatingActionButton(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (context) => LiveView())),
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const LiveView())),
                 elevation: 2,
                 highlightElevation: 0,
                 backgroundColor: Theme.of(context).primaryColor,
@@ -285,111 +305,114 @@ class ChannelInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-        child: Container(
-      padding: const EdgeInsets.only(left: 15, right: 15, top: 15, bottom: 10),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(7)),
-            child: Column(
-              children: [
-                if (channel.banner != null)
-                  Image(image: NetworkImage('${channel.banner}')),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  color: Theme.of(context).primaryColor,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Row(
-                        children: [
-                          avatar(context: context, url: channel.thumbnail),
-                          Container(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                SizedBox(
-                                    width:
-                                        MediaQuery.of(context).size.width - 160,
-                                    child: Text(
-                                      channel.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold),
-                                    )),
-                                Text(
-                                  channel.subscriberCount ?? '',
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 12),
-                                )
-                              ],
-                            ),
-                            padding: const EdgeInsets.only(left: 10),
-                          )
-                        ],
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10))),
-                        child: IconButton(
-                          onPressed: () async {
-                            String url =
-                                'https://www.youtube.com/channel/${channel.id}';
-                            if (await canLaunch(url)) {
-                              launch(url, forceSafariVC: false);
-                            }
-                          },
-                          iconSize: 40,
-                          padding: const EdgeInsets.all(0),
-                          icon: const Icon(
-                            MdiIcons.youtube,
-                            color: Colors.red,
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                )
-              ],
-            ),
-          ),
-          Container(
-            height: 10,
-          ),
-          TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                channelList.remove(channel);
-              },
-              style: TextButton.styleFrom(
-                  primary: Colors.white, backgroundColor: Colors.red[400]),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+        child: SingleChildScrollView(
+      child: Container(
+        padding:
+            const EdgeInsets.only(left: 15, right: 15, top: 15, bottom: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(7)),
+              child: Column(
                 children: [
-                  const Icon(
-                    MdiIcons.accountMinus,
-                    size: 30,
-                    color: Colors.white,
-                  ),
+                  if (channel.banner != null)
+                    Image(image: NetworkImage('${channel.banner}')),
                   Container(
-                    width: 5,
-                  ),
-                  const Text(
-                    'Unfollow',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
+                    padding: const EdgeInsets.all(10),
+                    color: Theme.of(context).primaryColor,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Row(
+                          children: [
+                            avatar(context: context, url: channel.thumbnail),
+                            Container(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  SizedBox(
+                                      width: MediaQuery.of(context).size.width *
+                                          0.59,
+                                      child: Text(
+                                        channel.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold),
+                                      )),
+                                  Text(
+                                    channel.subscriberCount ?? '',
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 12),
+                                  )
+                                ],
+                              ),
+                              padding: const EdgeInsets.only(left: 10),
+                            )
+                          ],
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(10))),
+                          child: IconButton(
+                            onPressed: () async {
+                              String url =
+                                  'https://www.youtube.com/channel/${channel.id}';
+                              if (await canLaunch(url)) {
+                                launch(url, forceSafariVC: false);
+                              }
+                            },
+                            iconSize: 40,
+                            padding: const EdgeInsets.all(0),
+                            icon: const Icon(
+                              MdiIcons.youtube,
+                              color: Colors.red,
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
                   )
                 ],
-              ))
-        ],
+              ),
+            ),
+            Container(
+              height: 10,
+            ),
+            TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  channelList.remove(channel);
+                },
+                style: TextButton.styleFrom(
+                    primary: Colors.white, backgroundColor: Colors.red[400]),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      MdiIcons.accountMinus,
+                      size: 30,
+                      color: Colors.white,
+                    ),
+                    Container(
+                      width: 5,
+                    ),
+                    const Text(
+                      'Unfollow',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    )
+                  ],
+                ))
+          ],
+        ),
       ),
     ));
   }
@@ -564,8 +587,8 @@ class StreamInfo extends StatelessWidget {
                                       SizedBox(
                                           width: MediaQuery.of(context)
                                                   .size
-                                                  .width -
-                                              160,
+                                                  .width *
+                                              0.59,
                                           child: Text(
                                             channel.name,
                                             maxLines: 1,
@@ -627,7 +650,7 @@ class StreamInfo extends StatelessWidget {
                         ),
                       Container(
                         margin: const EdgeInsets.only(left: 10),
-                        width: MediaQuery.of(context).size.width * 0.60,
+                        width: MediaQuery.of(context).size.width - 235,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -647,16 +670,17 @@ class StreamInfo extends StatelessWidget {
                                       .primaryColor
                                       .withOpacity(0.8)),
                             ),
-                            Text(
-                              '${streamInfo['viewCount']} watching',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.6)),
-                            ),
+                            if (streamInfo['viewCount'] != null)
+                              Text(
+                                '${streamInfo['viewCount']} watching',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.6)),
+                              ),
                           ],
                         ),
                       ),
@@ -736,10 +760,12 @@ class AddState extends State<Add> {
           id.substring(0, id.indexOf('/'));
         }
       }
-      Channel? createdChannel = await Channel.getByWebScroper(id);
+      Channel? addChannel = widget.channelList.isUsingAPI
+          ? await Channel.getByAPI(id: id, api: widget.channelList.apiKey)
+          : await Channel.getByWebScroper(id);
       _controller.clear();
       setState(() {
-        channel = createdChannel;
+        channel = addChannel;
       });
     }
   }
@@ -749,6 +775,9 @@ class AddState extends State<Add> {
     if (id != '') {
       if (id.contains('watch')) {
         id = id.substring(id.indexOf('watch') + 8);
+      }
+      if (id.contains('youtu.be')) {
+        id = id.substring(id.lastIndexOf('/') + 1);
       }
       Stream? createdStream = await Stream.getByWebScroper(id);
       _controller.clear();
@@ -881,12 +910,17 @@ class AddState extends State<Add> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text(
-                              stream!.ownerName,
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).primaryColor),
+                            SizedBox(
+                              width: MediaQuery.of(context).size.width - 100,
+                              child: Text(
+                                stream!.ownerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).primaryColor),
+                              ),
                             ),
                             Text(
                               stream!.owner,

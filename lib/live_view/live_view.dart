@@ -3,7 +3,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'dart:io' show Platform;
 import 'package:provider/provider.dart';
-import '../Home/home.dart' show PlayList;
+import '../home/home.dart' show PlayList;
 
 import '../classes.dart';
 
@@ -96,7 +96,7 @@ class ControllerState extends State<Controller>
     animationController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 300));
 
-    animation = Tween(begin: 10.0, end: -135.0).animate(animationController)
+    animation = Tween(begin: 10.0, end: -165.0).animate(animationController)
       ..addListener(() {
         setState(() {});
       });
@@ -115,7 +115,7 @@ class ControllerState extends State<Controller>
   @override
   Widget build(BuildContext context) {
     return Positioned(
-        top: 0,
+        top: 10,
         left: animation.value,
         child: ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(15)),

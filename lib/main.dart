@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'classes.dart';
-import 'Home/home.dart';
+import 'home/home.dart';
 
 void main() async {
   ChannelList channelList = ChannelList();
