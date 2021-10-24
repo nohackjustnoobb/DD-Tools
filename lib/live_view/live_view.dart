@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'dart:io' show Platform;
 import 'package:provider/provider.dart';
 import '../home/home.dart' show PlayList;
 
@@ -54,7 +53,8 @@ class LiveView extends StatelessWidget {
                                       child: ClipRRect(
                                         borderRadius: const BorderRadius.all(
                                             Radius.circular(10)),
-                                        child: e.player,
+                                        child: e.getPlayer(
+                                            !channelList.forcePlaySound),
                                       ))),
                             ),
                           )
@@ -87,7 +87,7 @@ class ControllerState extends State<Controller>
   late AnimationController animationController;
   double volume = 100;
   bool isOpen = true;
-  bool isMuted = Platform.isIOS;
+  bool isMuted = true;
   bool isPlaying = true;
 
   @override
@@ -104,6 +104,8 @@ class ControllerState extends State<Controller>
     animationController.addStatusListener((status) {
       isOpen = status == AnimationStatus.dismissed;
     });
+
+    isMuted = !widget.channelList.forcePlaySound;
   }
 
   @override
@@ -153,12 +155,15 @@ class ControllerState extends State<Controller>
                       splashRadius: 18,
                     ),
                     IconButton(
-                      onPressed:
-                          Platform.isIOS || widget.channelList.playList.isEmpty
-                              ? null
-                              : () => isMuted
-                                  ? widget.channelList.unMuteAll()
-                                  : widget.channelList.muteAll(),
+                      onPressed: !widget.channelList.forcePlaySound ||
+                              widget.channelList.playList.isEmpty
+                          ? null
+                          : () => setState(() {
+                                isMuted
+                                    ? widget.channelList.unMuteAll()
+                                    : widget.channelList.muteAll();
+                                isMuted = !isMuted;
+                              }),
                       iconSize: 28,
                       icon: Icon(
                           isMuted ? MdiIcons.volumeMute : MdiIcons.volumeHigh),
@@ -295,7 +300,7 @@ class ControllerListState extends State<ControllerList> {
                     IconButton(
                       onPressed: () => setState(() {
                         if (stream.isMuted) {
-                          if (Platform.isIOS) {
+                          if (!widget.channelList.forcePlaySound) {
                             widget.channelList.muteAll();
                           }
                           stream.unMute();

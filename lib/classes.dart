@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:html/parser.dart' show parse;
-import 'dart:io' show Platform;
 
 class Channel {
   String name, id, thumbnail, description;
@@ -20,7 +20,11 @@ class Channel {
       this.banner,
       this.stream});
 
-  static Future getByAPI({id, api, ChannelList? channelList}) async {
+  static Future getByAPI(
+      {required id,
+      required api,
+      ChannelList? channelList,
+      bool isHybridMode = true}) async {
     try {
       final response = await http.get(Uri.parse(
           'https://youtube.googleapis.com/youtube/v3/channels?part=statistics&part=snippet&part=brandingSettings&id=$id&key=$api'));
@@ -50,7 +54,14 @@ class Channel {
             banner: channelData['brandingSettings']['image']
                 ['bannerExternalUrl']);
 
-        channel.updateStreamByWebScropper(channelList: channelList);
+        if (isHybridMode) {
+          channel.updateStreamByWebScropper(channelList: channelList);
+        } else {
+          dynamic result = await channel.updateStreamByAPI(api: api);
+          if (result is Exception) {
+            return Exception('reachQuotaLimit');
+          }
+        }
 
         return channel;
       } else if (response.statusCode == 403) {
@@ -131,7 +142,7 @@ class Channel {
     }
   }
 
-  dynamic updateStreamByWebScropper({ChannelList? channelList}) async {
+  Future updateStreamByWebScropper({ChannelList? channelList}) async {
     try {
       final response = await http.get(
           Uri.parse('https://www.youtube.com/embed/live_stream?channel=$id'),
@@ -172,6 +183,52 @@ class Channel {
         title: Text('Fail to fetch stream info.'),
       );
 
+      if (stream != null && channelList != null) {
+        channelList.removePlayList(stream!.id);
+      }
+
+      stream = null;
+      return null;
+    }
+  }
+
+  Future updateStreamByAPI({
+    required String api,
+    ChannelList? channelList,
+  }) async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://youtube.googleapis.com/youtube/v3/search?part=snippet&channelId=$id&eventType=live&type=video&key=$api'));
+      if (response.statusCode == 200) {
+        Map streamData = jsonDecode(response.body)['items'][0];
+
+        if (stream != null && stream!.id == streamData['id']['videoId']) {
+          stream = Stream(
+            title: streamData['snippet']['title'],
+            id: streamData['id']['videoId'],
+            owner: id,
+            ownerName: name,
+            ownerThumbnail: thumbnail,
+          );
+        }
+
+        if (channelList != null) {
+          // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+          channelList.notifyListeners();
+        }
+
+        return stream;
+      } else if (response.statusCode == 403) {
+        return Exception('reachQuotaLimit');
+      } else {
+        throw Exception();
+      }
+    } catch (e) {
+      if (stream != null && channelList != null) {
+        channelList.removePlayList(stream!.id);
+      }
+
+      stream = null;
       return null;
     }
   }
@@ -195,7 +252,13 @@ class Stream {
         'ownerThumbnail': ownerThumbnail
       };
 
-  YoutubePlayerIFrame? get player => _player;
+  YoutubePlayerIFrame? getPlayer(bool? muted) {
+    if (muted != null && muted != isMuted) {
+      createPlayer(muted: muted);
+    }
+
+    return _player;
+  }
 
   Stream(
       {required this.title,
@@ -258,13 +321,13 @@ class Stream {
     }
   }
 
-  createPlayer() {
-    //TODO: android have same problem with ios
+  createPlayer({bool? muted}) {
+    isMuted = muted ?? true;
     _controller = YoutubePlayerController(
         initialVideoId: id,
         params: YoutubePlayerParams(
             showControls: false,
-            mute: Platform.isIOS,
+            mute: isMuted,
             autoPlay: true,
             desktopMode: true));
 
@@ -296,17 +359,24 @@ class Stream {
     _controller!.pause();
     isPlaying = false;
   }
+
+  syncStatus() {
+    isMuted ? mute() : unMute();
+    isPlaying ? play() : pause();
+  }
 }
 
 class ChannelList extends ChangeNotifier {
   final _channelList = <Channel>[];
   final _channelIDList = <String>[];
   final _playList = <Stream>[];
+  final _playIDList = <String>[];
   String? _apiKey;
-  bool keyReachLimit = false;
+  bool keyReachLimit = false, isHybridMode = true, forcePlaySound = false;
 
   List<Channel> get channelList => _channelList;
   List<Stream> get playList => _playList;
+  List<String> get playIDList => _playIDList;
   List<Stream?> get streamList => _channelList
       .where((element) => element.stream != null)
       .map((e) => e.stream)
@@ -320,6 +390,42 @@ class ChannelList extends ChangeNotifier {
   void save() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setStringList('Channel', _channelIDList);
+    prefs.setBool('hybridMode', isHybridMode);
+    prefs.setString('API', _apiKey.toString());
+    prefs.setBool('forcePlaySound', forcePlaySound);
+  }
+
+  void toggleHybridMode({bool? enable}) {
+    isHybridMode = enable ?? !isHybridMode;
+    save();
+  }
+
+  void toggleForcePlaySound({bool? enable}) {
+    forcePlaySound = enable ?? !forcePlaySound;
+    save();
+  }
+
+  Future updateStreamWithPreferWay({required Channel channel}) async {
+    dynamic stream;
+
+    if (_apiKey != null && !keyReachLimit) {
+      stream = await channel.updateStreamByAPI(
+          api: _apiKey.toString(), channelList: this);
+      if (stream is Exception) {
+        keyReachLimit = true;
+        updateStreamWithPreferWay(channel: channel);
+      }
+    } else {
+      stream = channel.updateStreamByWebScropper(channelList: this);
+    }
+    return stream;
+  }
+
+  Future updateStream() async {
+    for (Channel channel in _channelList) {
+      await updateStreamWithPreferWay(channel: channel);
+    }
+    return null;
   }
 
   // API
@@ -328,9 +434,8 @@ class ChannelList extends ChangeNotifier {
       final response = await http.get(Uri.parse(
           'https://youtube.googleapis.com/youtube/v3/activities?part=id&channelId=UC_x5XG1OV2P6uZZ5FSM9Ttw&key=$key'));
       if (response.statusCode == 200) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('API', key);
         _apiKey = key;
+        save();
         notifyListeners();
         return true;
       } else {
@@ -378,9 +483,10 @@ class ChannelList extends ChangeNotifier {
   }
 
   Future<bool> addChannelWithPreferWay({required String id}) async {
-    Channel? channel;
+    dynamic channel;
     if (_apiKey != null && !keyReachLimit) {
-      channel = await Channel.getByAPI(id: id, api: _apiKey, channelList: this);
+      channel = await Channel.getByAPI(
+          id: id, api: _apiKey, channelList: this, isHybridMode: isHybridMode);
       if (channel is Exception) {
         keyReachLimit = true;
         addChannelWithPreferWay(id: id);
@@ -388,7 +494,7 @@ class ChannelList extends ChangeNotifier {
     } else {
       channel = await Channel.getByWebScroper(id);
     }
-    if (channel != null) add(channel);
+    if (channel != null && channel is! Exception) add(channel);
     return channel != null;
   }
 
@@ -403,6 +509,8 @@ class ChannelList extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? idList = prefs.getStringList('Channel');
     _apiKey = prefs.getString('API');
+    isHybridMode = prefs.getBool('hybridMode') ?? true;
+    forcePlaySound = prefs.getBool('forcePlaySound') ?? false;
 
     if (idList == null) return;
 
@@ -420,7 +528,8 @@ class ChannelList extends ChangeNotifier {
   void addPlayList(Stream? stream) {
     if (stream != null && !_playList.contains(stream)) {
       _playList.add(stream);
-      stream.createPlayer();
+      _playIDList.add(stream.id);
+      stream.createPlayer(muted: !forcePlaySound);
     }
     notifyListeners();
   }
@@ -429,6 +538,7 @@ class ChannelList extends ChangeNotifier {
     List<Stream> streamListFiltered = streamList.whereType<Stream>().toList();
     if (streamListFiltered.isNotEmpty) {
       _playList.addAll(streamListFiltered);
+      _playIDList.addAll(streamListFiltered.map((e) => e.id).toList());
       for (var stream in streamListFiltered) {
         stream.createPlayer();
       }
@@ -439,11 +549,13 @@ class ChannelList extends ChangeNotifier {
   void removePlayList(String id) {
     Stream? stream = _playList.firstWhere((element) => element.id == id);
     _playList.remove(stream);
+    _playIDList.remove(stream.id);
     notifyListeners();
   }
 
   void clearPlayList() {
     _playList.clear();
+    _playIDList.clear();
     notifyListeners();
   }
 
@@ -477,6 +589,12 @@ class ChannelList extends ChangeNotifier {
   pauseAll() {
     for (Stream stream in _playList) {
       stream.pause();
+    }
+  }
+
+  syncAll() {
+    for (Stream stream in _playList) {
+      stream.syncStatus();
     }
   }
 }

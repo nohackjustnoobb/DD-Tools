@@ -418,13 +418,26 @@ class ChannelInfo extends StatelessWidget {
   }
 }
 
-class StreamList extends StatelessWidget {
+class StreamList extends StatefulWidget {
   final List<Stream?> streamList;
   final ChannelList channelList;
 
   const StreamList(
       {Key? key, required this.streamList, required this.channelList})
       : super(key: key);
+
+  @override
+  StreamListState createState() => StreamListState();
+}
+
+class StreamListState extends State<StreamList> {
+  bool isLoading = false;
+
+  update() async {
+    await widget.channelList.updateStream();
+    isLoading = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -442,93 +455,136 @@ class StreamList extends StatelessWidget {
                     color: Colors.black.withOpacity(0.1)),
               ),
               Expanded(
-                  child: ListView.separated(
-                      padding: const EdgeInsets.only(left: 10, right: 5),
-                      itemCount: streamList.length,
-                      separatorBuilder: (BuildContext context, int index) =>
-                          Divider(
-                            indent: 40,
-                            endIndent: 40,
-                            color: Colors.black.withOpacity(0.3),
-                          ),
-                      itemBuilder: (BuildContext context, int index) {
-                        Map streamInfo = streamList[index]!.info;
-                        bool inPlaylist =
-                            channelList.playList.contains(streamList[index]);
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            GestureDetector(
-                              onTap: () => showBarModalBottomSheet(
-                                  context: context,
-                                  builder: (BuildContext context) => StreamInfo(
-                                      channelList: channelList,
-                                      stream: streamList[index])),
-                              child: Row(
-                                children: <Widget>[
-                                  Image(
-                                    image:
-                                        NetworkImage(streamInfo['thumbnail']),
-                                    width: 100,
-                                    height: 56.25,
-                                  ),
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 10),
-                                    width: MediaQuery.of(context).size.width *
-                                        0.55,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                child: NotificationListener<ScrollNotification>(
+                    onNotification: (scrollNotification) {
+                      if (scrollNotification is ScrollStartNotification &&
+                          !isLoading) {
+                        setState(() {
+                          isLoading = true;
+                        });
+                        update();
+                      }
+                      return true;
+                    },
+                    child: ListView.separated(
+                        padding: const EdgeInsets.only(left: 10, right: 5),
+                        itemCount: widget.streamList.length + 1,
+                        separatorBuilder: (BuildContext context, int index) {
+                          if (index != 0) {
+                            return Divider(
+                              indent: 40,
+                              endIndent: 40,
+                              color: Colors.black.withOpacity(0.3),
+                            );
+                          } else {
+                            return Container();
+                          }
+                        },
+                        itemBuilder: (BuildContext context, int index) {
+                          if (index == 0) {
+                            return isLoading
+                                ? Container(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Text(
-                                          streamInfo['title'],
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .primaryColor),
-                                        ),
-                                        Text(
-                                          streamInfo['ownerName'],
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .primaryColor
-                                                  .withOpacity(0.7)),
+                                        SizedBox(
+                                          width: 30,
+                                          height: 30,
+                                          child: CircularProgressIndicator(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                          ),
                                         )
                                       ],
                                     ),
                                   )
-                                ],
-                              ),
-                            ),
-                            Material(
-                              color: Colors.transparent,
-                              child: IconButton(
-                                onPressed: () {
-                                  if (inPlaylist) {
-                                    channelList
-                                        .removePlayList(streamList[index]!.id);
-                                  } else {
-                                    channelList.addPlayList(streamList[index]);
-                                  }
-                                },
-                                iconSize: 30,
-                                icon: Icon(
-                                  inPlaylist
-                                      ? MdiIcons.playlistMinus
-                                      : MdiIcons.playlistPlus,
-                                  color: inPlaylist
-                                      ? Colors.red[400]
-                                      : Theme.of(context).primaryColor,
+                                : Container();
+                          } else {
+                            Map streamInfo = widget.streamList[index - 1]!.info;
+                            bool inPlaylist = widget.channelList.playIDList
+                                .contains(widget.streamList[index - 1]!.id);
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                GestureDetector(
+                                  onTap: () => showBarModalBottomSheet(
+                                      context: context,
+                                      builder: (BuildContext context) =>
+                                          StreamInfo(
+                                              channelList: widget.channelList,
+                                              stream: widget
+                                                  .streamList[index - 1])),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Image(
+                                        image: NetworkImage(
+                                            streamInfo['thumbnail']),
+                                        width: 100,
+                                        height: 56.25,
+                                      ),
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 10),
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                                0.55,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              streamInfo['title'],
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                  color: Theme.of(context)
+                                                      .primaryColor),
+                                            ),
+                                            Text(
+                                              streamInfo['ownerName'],
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                  color: Theme.of(context)
+                                                      .primaryColor
+                                                      .withOpacity(0.7)),
+                                            )
+                                          ],
+                                        ),
+                                      )
+                                    ],
+                                  ),
                                 ),
-                                splashRadius: 20,
-                              ),
-                            )
-                          ],
-                        );
-                      }))
+                                Material(
+                                  color: Colors.transparent,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      if (inPlaylist) {
+                                        widget.channelList.removePlayList(
+                                            widget.streamList[index - 1]!.id);
+                                      } else {
+                                        widget.channelList.addPlayList(
+                                            widget.streamList[index - 1]);
+                                      }
+                                    },
+                                    iconSize: 30,
+                                    icon: Icon(
+                                      inPlaylist
+                                          ? MdiIcons.playlistMinus
+                                          : MdiIcons.playlistPlus,
+                                      color: inPlaylist
+                                          ? Colors.red[400]
+                                          : Theme.of(context).primaryColor,
+                                    ),
+                                    splashRadius: 20,
+                                  ),
+                                )
+                              ],
+                            );
+                          }
+                        })),
+              )
             ],
           ),
           width: MediaQuery.of(context).size.width,
@@ -760,9 +816,19 @@ class AddState extends State<Add> {
           id.substring(0, id.indexOf('/'));
         }
       }
-      Channel? addChannel = widget.channelList.isUsingAPI
-          ? await Channel.getByAPI(id: id, api: widget.channelList.apiKey)
-          : await Channel.getByWebScroper(id);
+
+      dynamic addChannel;
+      if (widget.channelList.isUsingAPI && !widget.channelList.keyReachLimit) {
+        addChannel =
+            await Channel.getByAPI(id: id, api: widget.channelList.apiKey);
+
+        if (addChannel is Exception) {
+          addChannel = await Channel.getByWebScroper(id);
+        }
+      } else {
+        addChannel = await Channel.getByWebScroper(id);
+      }
+
       _controller.clear();
       setState(() {
         channel = addChannel;

@@ -14,6 +14,8 @@ class Settings extends StatefulWidget {
 }
 
 class SettingsState extends State<Settings> {
+  bool isShowingAdvanced = false, isHybridMode = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,6 +91,108 @@ class SettingsState extends State<Settings> {
                       )
                     ],
                   ),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      children: <Widget>[
+                        GestureDetector(
+                          onTap: () => setState(
+                              () => isShowingAdvanced = !isShowingAdvanced),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Row(
+                                children: <Widget>[
+                                  Icon(
+                                    MdiIcons.cog,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                  const SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    'Advanced Settings',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .primaryColor
+                                            .withOpacity(0.7)),
+                                  )
+                                ],
+                              ),
+                              Icon(
+                                isShowingAdvanced
+                                    ? MdiIcons.chevronDown
+                                    : MdiIcons.chevronLeft,
+                                color: Theme.of(context).primaryColor,
+                                size: 30,
+                              )
+                            ],
+                          ),
+                        ),
+                        if (isShowingAdvanced)
+                          Column(
+                            children: <Widget>[
+                              Text(
+                                'Not recommended to change the options here because it may cause some bugs.',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.5)),
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  Text(
+                                    'Hybrid Fetch Mode',
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .primaryColor
+                                            .withOpacity(0.8)),
+                                  ),
+                                  Switch(
+                                    value: channelList.isHybridMode,
+                                    onChanged: channelList.isUsingAPI
+                                        ? (_) => setState(() => channelList
+                                            .toggleHybridMode(enable: _))
+                                        : null,
+                                    activeTrackColor: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.6),
+                                    activeColor: Theme.of(context).primaryColor,
+                                  )
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  Text(
+                                    'Force Play Sound',
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .primaryColor
+                                            .withOpacity(0.8)),
+                                  ),
+                                  Switch(
+                                    value: channelList.forcePlaySound,
+                                    onChanged: (_) => setState(() => channelList
+                                        .toggleForcePlaySound(enable: _)),
+                                    activeTrackColor: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.6),
+                                    activeColor: Theme.of(context).primaryColor,
+                                  )
+                                ],
+                              ),
+                            ],
+                          )
+                      ],
+                    ),
+                  )
                 ],
               ),
             ),
