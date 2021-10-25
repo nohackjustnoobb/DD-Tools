@@ -202,15 +202,13 @@ class Channel {
       if (response.statusCode == 200) {
         Map streamData = jsonDecode(response.body)['items'][0];
 
-        if (stream != null && stream!.id == streamData['id']['videoId']) {
-          stream = Stream(
-            title: streamData['snippet']['title'],
-            id: streamData['id']['videoId'],
-            owner: id,
-            ownerName: name,
-            ownerThumbnail: thumbnail,
-          );
-        }
+        stream = Stream(
+          title: streamData['snippet']['title'],
+          id: streamData['id']['videoId'],
+          owner: id,
+          ownerName: name,
+          ownerThumbnail: thumbnail,
+        );
 
         if (channelList != null) {
           // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
@@ -408,7 +406,7 @@ class ChannelList extends ChangeNotifier {
   Future updateStreamWithPreferWay({required Channel channel}) async {
     dynamic stream;
 
-    if (_apiKey != null && !keyReachLimit) {
+    if (_apiKey != null && !keyReachLimit && !isHybridMode) {
       stream = await channel.updateStreamByAPI(
           api: _apiKey.toString(), channelList: this);
       if (stream is Exception) {
@@ -596,5 +594,54 @@ class ChannelList extends ChangeNotifier {
     for (Stream stream in _playList) {
       stream.syncStatus();
     }
+  }
+}
+
+class ThemeModel extends ChangeNotifier {
+  late int themeColor;
+
+  static Future<ThemeModel> getFromStorage() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    ThemeModel themeModel = ThemeModel();
+    int? value = prefs.getInt('themeColor');
+    try {
+      if (value != null) {
+        Color color = Color(value);
+        // ignore: unnecessary_null_comparison
+        if (color != null && color.alpha == 0xFF) {
+          themeModel.themeColor = value;
+        } else {
+          throw Exception();
+        }
+      } else {
+        throw Exception();
+      }
+    } catch (e) {
+      themeModel.themeColor = Colors.indigo[400].hashCode;
+    }
+
+    prefs.setInt('themeColor', themeModel.themeColor);
+
+    return themeModel;
+  }
+
+  Future<void> changeThemeColor(int colorHash) async {
+    WidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    try {
+      Color color = Color(colorHash);
+      // ignore: unnecessary_null_comparison
+      if (color != null && color.alpha == 0xFF) {
+        themeColor = colorHash;
+      } else {
+        throw Exception();
+      }
+    } catch (e) {
+      themeColor = Colors.indigo[400].hashCode;
+    }
+    prefs.setInt('themeColor', colorHash);
+
+    notifyListeners();
   }
 }

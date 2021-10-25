@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -14,7 +15,15 @@ class Settings extends StatefulWidget {
 }
 
 class SettingsState extends State<Settings> {
-  bool isShowingAdvanced = false, isHybridMode = true;
+  bool isShowingAdvanced = false;
+  static List<int> defaultColor = [
+    0xffF26868,
+    0xffF2BCD1,
+    0xff6dc2c9,
+    0xff6873F2,
+    0xffc28ef9,
+  ];
+  int pickerColor = Colors.white.hashCode;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +99,123 @@ class SettingsState extends State<Settings> {
                         ),
                       )
                     ],
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Container(
+                              padding: const EdgeInsets.only(
+                                left: 10,
+                                right: 5,
+                              ),
+                              child: Icon(
+                                MdiIcons.compare,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            Text(
+                              'Theme Color',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.7)),
+                            ),
+                          ],
+                        ),
+                        Consumer<ThemeModel>(
+                            builder: (BuildContext context, themeMdoel,
+                                    child) =>
+                                Row(
+                                  children: <Widget>[
+                                    GestureDetector(
+                                      onTap: () => showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) =>
+                                            AlertDialog(
+                                          content: SingleChildScrollView(
+                                            child: ColorPicker(
+                                              pickerColor: Color(pickerColor),
+                                              onColorChanged: (color) =>
+                                                  setState(() => pickerColor =
+                                                      color.hashCode),
+                                              showLabel: true,
+                                              pickerAreaHeightPercent: 0.8,
+                                            ),
+                                          ),
+                                          actions: <Widget>[
+                                            TextButton(
+                                              child: const Text('OK'),
+                                              onPressed: () {
+                                                themeMdoel.changeThemeColor(
+                                                    pickerColor);
+                                                Navigator.of(context).pop();
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 2.5),
+                                        child: ClipRRect(
+                                          borderRadius: const BorderRadius.all(
+                                              Radius.circular(10)),
+                                          child: Container(
+                                            child: const Icon(
+                                              MdiIcons.palette,
+                                              color: Colors.white,
+                                              size: 25,
+                                            ),
+                                            width: 30,
+                                            height: 30,
+                                            color: Color(themeMdoel.themeColor),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    ...defaultColor
+                                        .map(
+                                          (e) => GestureDetector(
+                                            onTap: () =>
+                                                e == themeMdoel.themeColor
+                                                    ? null
+                                                    : themeMdoel
+                                                        .changeThemeColor(e),
+                                            child: Container(
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 2.5),
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      const BorderRadius.all(
+                                                          Radius.circular(10)),
+                                                  child: Container(
+                                                    color: Color(e),
+                                                    width: 30,
+                                                    height: 30,
+                                                    child: e ==
+                                                            themeMdoel
+                                                                .themeColor
+                                                        ? const Icon(
+                                                            MdiIcons.checkBold,
+                                                            color: Colors.white,
+                                                          )
+                                                        : null,
+                                                  ),
+                                                )),
+                                          ),
+                                        )
+                                        .toList()
+                                  ],
+                                ))
+                      ],
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.all(10),

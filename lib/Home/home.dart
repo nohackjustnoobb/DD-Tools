@@ -457,12 +457,16 @@ class StreamListState extends State<StreamList> {
               Expanded(
                 child: NotificationListener<ScrollNotification>(
                     onNotification: (scrollNotification) {
-                      if (scrollNotification is ScrollStartNotification &&
+                      if (scrollNotification is ScrollUpdateNotification &&
                           !isLoading) {
-                        setState(() {
-                          isLoading = true;
-                        });
-                        update();
+                        // ignore: unnecessary_null_comparison
+                        if (scrollNotification.metrics.pixels != null &&
+                            scrollNotification.metrics.pixels <= -80) {
+                          setState(() {
+                            isLoading = true;
+                          });
+                          update();
+                        }
                       }
                       return true;
                     },
