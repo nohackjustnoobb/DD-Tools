@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:html/parser.dart' show parse;
 
 class Channel {
@@ -170,6 +171,9 @@ class Channel {
             ownerThumbnail: thumbnail);
 
         if (channelList != null) {
+          if (channelList._favouriteIDList.contains(id) && stream != null) {
+            channelList.addPlayList(stream);
+          }
           // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
           channelList.notifyListeners();
         }
@@ -211,6 +215,9 @@ class Channel {
         );
 
         if (channelList != null) {
+          if (channelList._favouriteIDList.contains(id) && stream != null) {
+            channelList.addPlayList(stream);
+          }
           // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
           channelList.notifyListeners();
         }
@@ -369,12 +376,15 @@ class ChannelList extends ChangeNotifier {
   final _channelIDList = <String>[];
   final _playList = <Stream>[];
   final _playIDList = <String>[];
+  List<String> _favouriteIDList = [];
+  late PackageInfo packageInfo;
   String? _apiKey;
   bool keyReachLimit = false, isHybridMode = true, forcePlaySound = false;
 
   List<Channel> get channelList => _channelList;
   List<Stream> get playList => _playList;
   List<String> get playIDList => _playIDList;
+  List<String> get favouriteIDList => _favouriteIDList;
   List<Stream?> get streamList => _channelList
       .where((element) => element.stream != null)
       .map((e) => e.stream)
@@ -391,6 +401,7 @@ class ChannelList extends ChangeNotifier {
     prefs.setBool('hybridMode', isHybridMode);
     prefs.setString('API', _apiKey.toString());
     prefs.setBool('forcePlaySound', forcePlaySound);
+    prefs.setStringList('favouriteIDList', _favouriteIDList);
   }
 
   void toggleHybridMode({bool? enable}) {
@@ -424,6 +435,35 @@ class ChannelList extends ChangeNotifier {
       await updateStreamWithPreferWay(channel: channel);
     }
     return null;
+  }
+
+  void clearAllData() {
+    _channelIDList.clear();
+    _channelList.clear();
+    _playList.clear();
+    _playIDList.clear();
+    _favouriteIDList.clear();
+    _apiKey = null;
+    keyReachLimit = false;
+    isHybridMode = true;
+    forcePlaySound = false;
+    save();
+    notifyListeners();
+  }
+
+  // favourite
+  void toggleFavourite(String id) {
+    _favouriteIDList.contains(id)
+        ? _favouriteIDList.remove(id)
+        : _favouriteIDList.add(id);
+    save();
+    notifyListeners();
+  }
+
+  void clearFavourite() {
+    _favouriteIDList.clear();
+    save();
+    notifyListeners();
   }
 
   // API
@@ -509,6 +549,8 @@ class ChannelList extends ChangeNotifier {
     _apiKey = prefs.getString('API');
     isHybridMode = prefs.getBool('hybridMode') ?? true;
     forcePlaySound = prefs.getBool('forcePlaySound') ?? false;
+    _favouriteIDList = prefs.getStringList('favouriteIDList') ?? [];
+    packageInfo = await PackageInfo.fromPlatform();
 
     if (idList == null) return;
 
@@ -524,7 +566,7 @@ class ChannelList extends ChangeNotifier {
 
   // Playlist
   void addPlayList(Stream? stream) {
-    if (stream != null && !_playList.contains(stream)) {
+    if (stream != null && !_playIDList.contains(stream.id)) {
       _playList.add(stream);
       _playIDList.add(stream.id);
       stream.createPlayer(muted: !forcePlaySound);
@@ -618,7 +660,7 @@ class ThemeModel extends ChangeNotifier {
         throw Exception();
       }
     } catch (e) {
-      themeModel.themeColor = Colors.indigo[400].hashCode;
+      themeModel.themeColor = 0xff6873F2;
     }
 
     prefs.setInt('themeColor', themeModel.themeColor);
@@ -642,6 +684,14 @@ class ThemeModel extends ChangeNotifier {
     }
     prefs.setInt('themeColor', colorHash);
 
+    notifyListeners();
+  }
+
+  void resetTheme() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.remove('themeColor');
+    themeColor = 0xff6873F2;
     notifyListeners();
   }
 }

@@ -314,10 +314,51 @@ class SettingsState extends State<Settings> {
                                   )
                                 ],
                               ),
+                              Consumer<ThemeModel>(
+                                builder: (BuildContext context, themeModel,
+                                        child) =>
+                                    TextButton(
+                                        style: TextButton.styleFrom(
+                                            primary: Colors.white,
+                                            backgroundColor: Colors.red[400],
+                                            minimumSize: const Size(140, 30)),
+                                        onPressed: () {
+                                          channelList.clearAllData();
+                                          themeModel.resetTheme();
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text(
+                                          'Clear All Data',
+                                          style: TextStyle(color: Colors.white),
+                                        )),
+                              )
                             ],
                           )
                       ],
                     ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        height: 50,
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Text(
+                            'DD-Tools  Ver ${channelList.packageInfo.version}',
+                            style:
+                                TextStyle(color: Colors.black.withOpacity(0.3)),
+                          ),
+                          Text(
+                            'nohackjustnoobb@github',
+                            style:
+                                TextStyle(color: Colors.black.withOpacity(0.3)),
+                          ),
+                        ],
+                      )
+                    ],
                   )
                 ],
               ),

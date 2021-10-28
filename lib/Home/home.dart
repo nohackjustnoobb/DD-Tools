@@ -90,7 +90,16 @@ class Home extends StatelessWidget {
                   Material(
                     color: Colors.transparent,
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed: () => showBarModalBottomSheet(
+                          context: context,
+                          builder: (BuildContext context) =>
+                              Consumer<ChannelList>(
+                                  builder: (BuildContext context, channelList,
+                                          child) =>
+                                      FollowedList(
+                                        channelListObject: channelList,
+                                        isFav: true,
+                                      ))),
                       padding: EdgeInsets.zero,
                       iconSize: 30,
                       icon: const Icon(
@@ -163,134 +172,169 @@ class Home extends StatelessWidget {
 
 class FollowedList extends StatelessWidget {
   final ChannelList channelListObject;
+  final bool isFav;
 
-  const FollowedList({Key? key, required this.channelListObject})
+  const FollowedList(
+      {Key? key, required this.channelListObject, this.isFav = false})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    List<Channel>? channelList = channelListObject.channelList;
-    return Expanded(
-      flex: 1,
-      child: Container(
-        child: Column(
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Followed',
-                      style: TextStyle(
-                          color: Theme.of(context).primaryColor, fontSize: 20),
-                    ),
-                    Container(
-                      width: 50,
-                      height: 3,
-                      decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor,
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(1.5))),
-                    )
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.only(right: 5),
-                  child: GestureDetector(
+    List<Channel>? channelList = isFav
+        ? channelListObject.channelList
+            .where((element) =>
+                channelListObject.favouriteIDList.contains(element.id))
+            .toList()
+        : channelListObject.channelList;
+    Widget listView = ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.only(top: 5),
+        itemCount: channelList.length,
+        separatorBuilder: (BuildContext context, int index) => Divider(
+              indent: 40,
+              endIndent: 40,
+              color: Colors.black.withOpacity(0.3),
+            ),
+        itemBuilder: (BuildContext context, int index) {
+          Channel channel = channelList[index];
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  avatar(context: context, url: channel.thumbnail),
+                  GestureDetector(
                     onTap: () => showBarModalBottomSheet(
                         context: context,
-                        builder: (context) =>
-                            Add(channelList: channelListObject)),
-                    child: Icon(
-                      MdiIcons.accountPlus,
-                      size: 28,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                )
-              ],
-            ),
-            Expanded(
-                child: ListView.separated(
-                    padding: const EdgeInsets.only(top: 5),
-                    itemCount: channelList.length,
-                    separatorBuilder: (BuildContext context, int index) =>
-                        Divider(
-                          indent: 40,
-                          endIndent: 40,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                    itemBuilder: (BuildContext context, int index) {
-                      Channel channel = channelList[index];
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        builder: (BuildContext context) => ChannelInfo(
+                              channelList: channelListObject,
+                              channel: channel,
+                            )),
+                    child: Container(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              avatar(context: context, url: channel.thumbnail),
-                              GestureDetector(
-                                onTap: () => showBarModalBottomSheet(
-                                    context: context,
-                                    builder: (BuildContext context) =>
-                                        ChannelInfo(
-                                          channelList: channelListObject,
-                                          channel: channel,
-                                        )),
-                                child: Container(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      SizedBox(
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.6,
-                                        child: Text(
-                                          channel.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .primaryColor,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                      Text(
-                                        channel.subscriberCount ?? '',
-                                        maxLines: 1,
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .primaryColor
-                                                .withOpacity(0.8),
-                                            fontSize: 12),
-                                      )
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.only(left: 10),
-                                ),
-                              )
-                            ],
-                          ),
-                          //TODO: add favourite to automatic add to playlist
-                          IconButton(
-                            onPressed: () {},
-                            icon: Icon(
-                              MdiIcons.heartOutline,
-                              color: Colors.red[400],
-                              size: 28,
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.6,
+                            child: Text(
+                              channel.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.bold),
                             ),
-                            splashRadius: 20,
+                          ),
+                          Text(
+                            channel.subscriberCount ?? '',
+                            maxLines: 1,
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.8),
+                                fontSize: 12),
                           )
                         ],
-                      );
-                    }))
-          ],
-        ),
-        padding: const EdgeInsets.fromLTRB(15, 20, 10, 0),
-      ),
-    );
+                      ),
+                      padding: const EdgeInsets.only(left: 10),
+                    ),
+                  )
+                ],
+              ),
+              IconButton(
+                onPressed: () => channelListObject.toggleFavourite(channel.id),
+                icon: Icon(
+                  channelListObject.favouriteIDList.contains(channel.id)
+                      ? MdiIcons.heart
+                      : MdiIcons.heartOutline,
+                  color: Colors.red[400],
+                  size: 28,
+                ),
+                splashRadius: 20,
+              )
+            ],
+          );
+        });
+    return isFav
+        ? SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (channelListObject.favouriteIDList.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    child: Text(
+                      'No Favourite Channel',
+                      style: TextStyle(color: Colors.black.withOpacity(0.5)),
+                    ),
+                  )
+                else
+                  Container(padding: const EdgeInsets.all(10), child: listView),
+                TextButton(
+                    style: TextButton.styleFrom(
+                        primary: Colors.white,
+                        backgroundColor: Colors.red[400],
+                        minimumSize: const Size(200, 40)),
+                    onPressed: () {
+                      channelListObject.clearFavourite();
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text(
+                      'Clear',
+                      style: TextStyle(color: Colors.white),
+                    )),
+              ],
+            ),
+          )
+        : Expanded(
+            flex: 1,
+            child: Container(
+              child: Column(
+                children: <Widget>[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Followed',
+                            style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontSize: 20),
+                          ),
+                          Container(
+                            width: 50,
+                            height: 3,
+                            decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
+                                borderRadius: const BorderRadius.all(
+                                    Radius.circular(1.5))),
+                          )
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.only(right: 5),
+                        child: GestureDetector(
+                          onTap: () => showBarModalBottomSheet(
+                              context: context,
+                              builder: (context) =>
+                                  Add(channelList: channelListObject)),
+                          child: Icon(
+                            MdiIcons.accountPlus,
+                            size: 28,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                  Expanded(flex: 1, child: listView)
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(15, 20, 10, 0),
+            ),
+          );
   }
 }
 
