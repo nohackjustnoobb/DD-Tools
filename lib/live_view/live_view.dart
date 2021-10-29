@@ -31,7 +31,7 @@ class LiveView extends StatelessWidget {
               double playerWidth = getFitPlayerWidth(
                   MediaQuery.of(context).size.width,
                   MediaQuery.of(context).size.height,
-                  channelList.playList.length);
+                  channelList.playlist.length);
               return Stack(
                 children: [
                   Center(
@@ -40,7 +40,7 @@ class LiveView extends StatelessWidget {
                       spacing: 5,
                       runSpacing: 5,
                       runAlignment: WrapAlignment.spaceBetween,
-                      children: channelList.playList
+                      children: channelList.playlist
                           .map(
                             (e) => ClipRRect(
                               borderRadius:
@@ -139,7 +139,7 @@ class ControllerState extends State<Controller>
                       splashRadius: 18,
                     ),
                     IconButton(
-                      onPressed: widget.channelList.playList.isEmpty
+                      onPressed: widget.channelList.playlist.isEmpty
                           ? null
                           : () {
                               isPlaying
@@ -156,7 +156,7 @@ class ControllerState extends State<Controller>
                     ),
                     IconButton(
                       onPressed: !widget.channelList.forcePlaySound ||
-                              widget.channelList.playList.isEmpty
+                              widget.channelList.playlist.isEmpty
                           ? null
                           : () => setState(() {
                                 isMuted
@@ -173,7 +173,7 @@ class ControllerState extends State<Controller>
                       splashRadius: 18,
                     ),
                     IconButton(
-                      onPressed: widget.channelList.playList.isEmpty
+                      onPressed: widget.channelList.playlist.isEmpty
                           ? null
                           : () => showBarModalBottomSheet(
                               context: context,
@@ -237,15 +237,15 @@ class ControllerListState extends State<ControllerList> {
         child: ListView.separated(
             padding: const EdgeInsets.all(10),
             shrinkWrap: true,
-            itemCount: widget.channelList.playList.length,
+            itemCount: widget.channelList.playlist.length,
             separatorBuilder: (BuildContext context, int index) => Divider(
                   indent: 40,
                   endIndent: 40,
                   color: Colors.black.withOpacity(0.3),
                 ),
             itemBuilder: (BuildContext context, int index) {
-              Map streamInfo = widget.channelList.playList[index].info;
-              Stream stream = widget.channelList.playList[index];
+              Map streamInfo = widget.channelList.playlist[index].info;
+              Stream stream = widget.channelList.playlist[index];
               streamVolume[stream.id] = 100.0;
               return Column(children: <Widget>[
                 Row(
@@ -319,7 +319,7 @@ class ControllerListState extends State<ControllerList> {
                     ),
                     IconButton(
                       onPressed: () => setState(() {
-                        if (widget.channelList.playList.length == 1) {
+                        if (widget.channelList.playlist.length == 1) {
                           Navigator.of(context).pop();
                         }
                         widget.channelList.removePlayList(stream.id);

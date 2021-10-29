@@ -374,16 +374,17 @@ class Stream {
 class ChannelList extends ChangeNotifier {
   final _channelList = <Channel>[];
   final _channelIDList = <String>[];
-  final _playList = <Stream>[];
-  final _playIDList = <String>[];
+  final _playlist = <Stream>[];
+  final _playlistID = <String>[];
   List<String> _favouriteIDList = [];
   late PackageInfo packageInfo;
   String? _apiKey;
   bool keyReachLimit = false, isHybridMode = true, forcePlaySound = false;
 
   List<Channel> get channelList => _channelList;
-  List<Stream> get playList => _playList;
-  List<String> get playIDList => _playIDList;
+  List<String> get channelIDList => _channelIDList;
+  List<Stream> get playlist => _playlist;
+  List<String> get playlistID => _playlistID;
   List<String> get favouriteIDList => _favouriteIDList;
   List<Stream?> get streamList => _channelList
       .where((element) => element.stream != null)
@@ -399,9 +400,11 @@ class ChannelList extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setStringList('Channel', _channelIDList);
     prefs.setBool('hybridMode', isHybridMode);
-    prefs.setString('API', _apiKey.toString());
     prefs.setBool('forcePlaySound', forcePlaySound);
     prefs.setStringList('favouriteIDList', _favouriteIDList);
+    if (_apiKey != null && _apiKey != '') {
+      prefs.setString('API', _apiKey.toString());
+    }
   }
 
   void toggleHybridMode({bool? enable}) {
@@ -440,8 +443,8 @@ class ChannelList extends ChangeNotifier {
   void clearAllData() {
     _channelIDList.clear();
     _channelList.clear();
-    _playList.clear();
-    _playIDList.clear();
+    _playlist.clear();
+    _playlistID.clear();
     _favouriteIDList.clear();
     _apiKey = null;
     keyReachLimit = false;
@@ -504,7 +507,7 @@ class ChannelList extends ChangeNotifier {
 
   void remove(Channel channel) {
     _channelList.remove(channel);
-    if (channel.stream != null && _playList.contains(channel.stream)) {
+    if (channel.stream != null && _playlist.contains(channel.stream)) {
       removePlayList(channel.stream!.id);
     }
     _channelIDList.remove(channel.id);
@@ -515,14 +518,14 @@ class ChannelList extends ChangeNotifier {
   void removeAll() {
     _channelList.clear();
     _channelIDList.clear();
-    _playList.clear();
+    _playlist.clear();
 
     notifyListeners();
   }
 
   Future<bool> addChannelWithPreferWay({required String id}) async {
     dynamic channel;
-    if (_apiKey != null && !keyReachLimit) {
+    if (_apiKey != null && _apiKey != '' && !keyReachLimit) {
       channel = await Channel.getByAPI(
           id: id, api: _apiKey, channelList: this, isHybridMode: isHybridMode);
       if (channel is Exception) {
@@ -536,10 +539,12 @@ class ChannelList extends ChangeNotifier {
     return channel != null;
   }
 
-  void fetchInBackground({required List<String> idList}) async {
+  void fetchChannelList(
+      {required List<String> idList, bool isSave = false}) async {
     for (String id in idList) {
       await addChannelWithPreferWay(id: id);
     }
+    if (isSave) save();
   }
 
   Future<void> readFromStorage({bool fetchBackground = false}) async {
@@ -555,7 +560,7 @@ class ChannelList extends ChangeNotifier {
     if (idList == null) return;
 
     if (fetchBackground) {
-      fetchInBackground(idList: idList);
+      fetchChannelList(idList: idList);
     } else {
       for (String id in idList) {
         await addChannelWithPreferWay(id: id);
@@ -566,9 +571,9 @@ class ChannelList extends ChangeNotifier {
 
   // Playlist
   void addPlayList(Stream? stream) {
-    if (stream != null && !_playIDList.contains(stream.id)) {
-      _playList.add(stream);
-      _playIDList.add(stream.id);
+    if (stream != null && !_playlistID.contains(stream.id)) {
+      _playlist.add(stream);
+      _playlistID.add(stream.id);
       stream.createPlayer(muted: !forcePlaySound);
     }
     notifyListeners();
@@ -577,8 +582,8 @@ class ChannelList extends ChangeNotifier {
   void addMultiplePlayList(List<Stream?> streamList) {
     List<Stream> streamListFiltered = streamList.whereType<Stream>().toList();
     if (streamListFiltered.isNotEmpty) {
-      _playList.addAll(streamListFiltered);
-      _playIDList.addAll(streamListFiltered.map((e) => e.id).toList());
+      _playlist.addAll(streamListFiltered);
+      _playlistID.addAll(streamListFiltered.map((e) => e.id).toList());
       for (var stream in streamListFiltered) {
         stream.createPlayer();
       }
@@ -587,15 +592,15 @@ class ChannelList extends ChangeNotifier {
   }
 
   void removePlayList(String id) {
-    Stream? stream = _playList.firstWhere((element) => element.id == id);
-    _playList.remove(stream);
-    _playIDList.remove(stream.id);
+    Stream? stream = _playlist.firstWhere((element) => element.id == id);
+    _playlist.remove(stream);
+    _playlistID.remove(stream.id);
     notifyListeners();
   }
 
   void clearPlayList() {
-    _playList.clear();
-    _playIDList.clear();
+    _playlist.clear();
+    _playlistID.clear();
     notifyListeners();
   }
 
@@ -609,31 +614,31 @@ class ChannelList extends ChangeNotifier {
 
   // controller
   muteAll() {
-    for (Stream stream in _playList) {
+    for (Stream stream in _playlist) {
       stream.mute();
     }
   }
 
   unMuteAll() {
-    for (Stream stream in _playList) {
+    for (Stream stream in _playlist) {
       stream.unMute();
     }
   }
 
   playAll() {
-    for (Stream stream in _playList) {
+    for (Stream stream in _playlist) {
       stream.play();
     }
   }
 
   pauseAll() {
-    for (Stream stream in _playList) {
+    for (Stream stream in _playlist) {
       stream.pause();
     }
   }
 
   syncAll() {
-    for (Stream stream in _playList) {
+    for (Stream stream in _playlist) {
       stream.syncStatus();
     }
   }
