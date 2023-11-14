@@ -1,7 +1,7 @@
 # DD-Tools
 
 An open source application that allow you to watch multiple streams at the same time. </br>
-<i><b>This application will not have any functional update.</b></i>
+<i><b>This application will not have any update.</b></i>
 
 ## Instructions
 
